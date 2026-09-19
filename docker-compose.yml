@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  prodml-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prodml_crop_yield_api
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - MODEL_PATH=/app/models/model.pkl
+      - ENV=production
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
