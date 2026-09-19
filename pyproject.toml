@@ -20,7 +20,9 @@ dependencies = [
     "scikit-learn>=1.2.0",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
-    "joblib>=1.2.0"
+    "joblib>=1.2.0",
+    "onnxruntime>=1.15.0",
+    "skl2onnx>=1.14.0"
 ]
 
 [project.optional-dependencies]

@@ -11,6 +11,21 @@ def test_health_endpoint(client):
     assert data["model_loaded"] is True
 
 
+def test_metadata_endpoint(client):
+    """
+    Test /metadata endpoint returns 200 OK with model features and backends.
+    """
+    response = client.get("/metadata")
+    assert response.status_code == 200
+    data = response.json()
+    assert "app_name" in data
+    assert "version" in data
+    assert "feature_names" in data
+    assert "Area" in data["feature_names"]
+    assert "supported_backends" in data
+    assert "onnx" in data["supported_backends"]
+
+
 def test_predict_endpoint_success(client, valid_prediction_payload):
     """
     Test /predict endpoint returns 200 OK with valid payload matching notebook schema.
@@ -25,6 +40,30 @@ def test_predict_endpoint_success(client, valid_prediction_payload):
     assert data["predicted_yield_tons_ha"] >= 0.0
     assert data["status"] == "success"
     assert "X-Request-ID" in response.headers
+
+
+def test_predict_endpoint_onnx_backend(client, valid_prediction_payload):
+    """
+    Test /predict endpoint with ONNX backend.
+    """
+    response = client.post("/predict?backend=onnx", json=valid_prediction_payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["predicted_yield_hg_ha"] >= 0.0
+
+
+def test_predict_batch_endpoint_success(client, valid_prediction_payload):
+    """
+    Test /predict/batch endpoint with array of items.
+    """
+    batch_payload = {"inputs": [valid_prediction_payload, valid_prediction_payload]}
+    response = client.post("/predict/batch", json=batch_payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["total_items"] == 2
+    assert len(data["predictions"]) == 2
 
 
 def test_predict_endpoint_custom_request_id(client, valid_prediction_payload):

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -52,6 +52,19 @@ class CropPredictionOutput(BaseModel):
     status: str = Field(default="success", description="Prediction status")
 
 
+class BatchCropPredictionInput(BaseModel):
+    inputs: List[CropPredictionInput] = Field(
+        ..., min_length=1, max_length=100, description="List of crop prediction input objects"
+    )
+
+
+class BatchCropPredictionOutput(BaseModel):
+    request_id: str = Field(..., description="Unique correlation request ID")
+    predictions: List[CropPredictionOutput] = Field(..., description="List of prediction outputs")
+    total_items: int = Field(..., description="Number of batch items processed")
+    status: str = Field(default="success", description="Batch prediction status")
+
+
 class FeedbackInput(BaseModel):
     request_id: str = Field(..., description="Correlation ID of prediction request")
     actual_yield_hg_ha: float = Field(..., ge=0, description="Observed yield in hg/ha")
@@ -68,3 +81,14 @@ class HealthResponse(BaseModel):
     status: str = Field(..., description="Service health state")
     version: str = Field(..., description="API version")
     model_loaded: bool = Field(..., description="Model pipeline readiness indicator")
+
+
+class MetadataResponse(BaseModel):
+    app_name: str = Field(..., description="Application name")
+    version: str = Field(..., description="Model and API version")
+    model_path: str = Field(..., description="Path to trained Pickle model artifact")
+    onnx_path: str = Field(..., description="Path to trained ONNX model artifact")
+    feature_names: List[str] = Field(..., description="List of expected input features")
+    categorical_features: List[str] = Field(..., description="List of categorical features")
+    numeric_features: List[str] = Field(..., description="List of numerical features")
+    supported_backends: List[str] = Field(..., description="Supported inference engines")
