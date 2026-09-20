@@ -68,11 +68,16 @@ class CropYieldModel:
         use_backend = backend or self.backend
 
         is_batch = isinstance(input_data, list)
-        items = input_data if is_batch else [input_data]
+        items = [dict(item) for item in (input_data if is_batch else [input_data])]
+        for item in items:
+            if "Area_Item" not in item and "Area" in item and "Item" in item:
+                item["Area_Item"] = f"{item['Area']}_{item['Item']}"
+
         df = pd.DataFrame(items)[self.FEATURE_NAMES]
 
         if use_backend == "onnx" and self.ort_session is not None:
-            raw_preds = self._predict_onnx(df)
+            raw_log_preds = self._predict_onnx(df)
+            raw_preds = np.expm1(raw_log_preds)
         else:
             if self.pipeline is None:
                 raise RuntimeError("Model is not loaded. Call load_or_create() first.")
@@ -94,7 +99,7 @@ class CropYieldModel:
 
     def _predict_onnx(self, df: pd.DataFrame) -> np.ndarray:
         """
-        Internal helper for ONNX inference.
+        Internal helper for ONNX inference. Returns predictions in log scale.
         """
         inputs = {}
         for col in self.FEATURE_NAMES:

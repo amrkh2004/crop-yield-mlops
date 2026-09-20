@@ -5,13 +5,14 @@ from typing import Tuple, List
 FEATURE_NAMES: List[str] = [
     "Area",
     "Item",
+    "Area_Item",
     "Year",
     "average_rain_fall_mm_per_year",
     "pesticides_tonnes",
     "avg_temp",
 ]
 
-CATEGORICAL_FEATURES: List[str] = ["Area", "Item"]
+CATEGORICAL_FEATURES: List[str] = ["Area", "Item", "Area_Item"]
 NUMERIC_FEATURES: List[str] = [
     "Year",
     "average_rain_fall_mm_per_year",
@@ -26,7 +27,7 @@ def generate_synthetic_crop_data(
 ) -> Tuple[pd.DataFrame, pd.Series]:
     """
     Generates a synthetic crop yield dataset matching notebook feature definitions.
-    Features: Area, Item, Year, average_rain_fall_mm_per_year, pesticides_tonnes, avg_temp.
+    Features: Area, Item, Area_Item, Year, average_rain_fall_mm_per_year, pesticides_tonnes, avg_temp.
     Target: hg/ha_yield.
     """
     areas = ["Albania", "Egypt", "India", "United States of America", "Brazil"]
@@ -44,6 +45,7 @@ def generate_synthetic_crop_data(
     }
 
     df = pd.DataFrame(data)
+    df["Area_Item"] = df["Area"] + "_" + df["Item"]
 
     yield_hg = (
         (df["average_rain_fall_mm_per_year"] * 15.0)
