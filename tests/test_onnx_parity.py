@@ -1,7 +1,6 @@
 import time
 
 import numpy as np
-
 from prodml.data import generate_synthetic_crop_data
 from prodml.model import CropYieldModel
 

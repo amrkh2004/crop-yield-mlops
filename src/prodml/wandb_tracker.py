@@ -3,13 +3,13 @@ from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-import wandb
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 
+import wandb
 from prodml.data import generate_synthetic_crop_data
 from prodml.features import build_feature_preprocessor
 

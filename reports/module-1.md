@@ -1,7 +1,7 @@
 # Module 1 Deliverable Report: Crop Yield MLOps Packaging & Service
 
 ## Executive Summary
-This report summarizes the implementation, packaging, ONNX serialization, latency benchmarking, and API deployment for **Module 1 (Crop Yield Prediction Service)**. 
+This report summarizes the implementation, packaging, ONNX serialization, latency benchmarking, and API deployment for **Module 1 (Crop Yield Prediction Service)**.
 
 The project has been refactored into a production-grade Python package (`prodml`), equipped with structured JSON logging, correlation ID tracing middleware, dual backend model execution (scikit-learn Pickle & ONNX Runtime), multi-stage Docker containerization, and 93% Pytest code coverage.
 
@@ -64,7 +64,7 @@ The crop yield prediction model processes 6 environmental and agricultural featu
 
 ## 3. ONNX Export & Parity Verification
 
-The scikit-learn Random Forest regression pipeline was converted to ONNX format (opset 15) using `skl2onnx`. 
+The scikit-learn Random Forest regression pipeline was converted to ONNX format (opset 15) using `skl2onnx`.
 
 ### Parity Test Results (`tests/test_onnx_parity.py`)
 - **Metric**: Absolute and relative prediction tolerance ($|y_{\text{pickle}} - y_{\text{onnx}}| < 50 \text{ hg/ha}$)
