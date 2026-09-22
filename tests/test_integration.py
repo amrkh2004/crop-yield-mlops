@@ -8,6 +8,7 @@ client = TestClient(app)
 
 # --- 1. Health & Metadata Integration Tests ---
 
+
 def test_integration_health_endpoint_contract():
     """
     Integration Test: /health endpoint contract, HTTP status 200, and model readiness state.
@@ -38,6 +39,7 @@ def test_integration_metadata_endpoint_contract():
 
 
 # --- 2. /predict & /predict/batch Success & Schema Contract Tests ---
+
 
 @pytest.mark.parametrize("backend", ["pickle", "onnx"])
 def test_integration_predict_single_item_contract(backend):
@@ -107,6 +109,7 @@ def test_integration_predict_batch_contract():
 
 
 # --- 3. HTTP 422 Unprocessable Entity Validation Error Tests ---
+
 
 def test_integration_predict_422_missing_required_fields():
     """
@@ -207,6 +210,7 @@ def test_integration_batch_predict_422_empty_list():
 
 
 # --- 4. Feedback Endpoint Integration & 422 Validation Tests ---
+
 
 def test_integration_feedback_endpoint_success_and_422():
     """
