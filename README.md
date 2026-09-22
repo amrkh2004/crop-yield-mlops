@@ -1,9 +1,10 @@
 # 🌾 `prodml` - Crop Yield Prediction ML API
 
+[![CI/CD Pipeline](https://github.com/amrkh2004/crop-yield-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/amrkh2004/crop-yield-mlops/actions)
 [![Python Package](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![ONNX Runtime](https://img.shields.io/badge/ONNX-Runtime-blue.svg)](https://onnxruntime.ai/)
-[![Code Coverage](https://img.shields.io/badge/Coverage-93%25-success.svg)](https://pytest.org/)
+[![Code Coverage](https://img.shields.io/badge/Coverage-92%25-success.svg)](https://pytest.org/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--stage-2496ED.svg)](https://www.docker.com/)
 
 An enterprise-ready, production-grade Machine Learning REST API for predicting crop yield outputs based on environmental, agricultural, and weather metrics.
@@ -62,6 +63,30 @@ curl -X POST "http://localhost:8000/predict?backend=onnx" \
 | `POST` | `/predict` | Single-item yield prediction | `?backend=pickle` or `?backend=onnx` |
 | `POST` | `/predict/batch` | Batch yield prediction for multiple items | `?backend=onnx` |
 | `POST` | `/feedback` | Submit actual yield observations & model feedback | `FeedbackInput` |
+
+---
+
+## 📈 Experiment Tracking: MLflow vs Weights & Biases (W&B)
+
+Both **MLflow** and **Weights & Biases (W&B)** tracking engines are integrated into `prodml` to record hyperparameter configurations, evaluation metrics (`MAE`, `RMSE`, `R²`), and model artifacts across candidate architectures.
+
+### Candidate Model Experiments Comparison
+
+| Model Architecture | Key Hyperparameters | MAE (hg/ha) | MAE (t/ha) | RMSE | R² Score | Selected Stage |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Ridge Baseline** | `alpha=1.0` | 26,978.89 | 2.70 | 38,150.12 | 0.2588 | Candidate |
+| **Random Forest Tuned** | `n_estimators=100`, `max_depth=15` | 27,150.31 | 2.72 | 39,010.50 | 0.2199 | Candidate |
+| **Gradient Boosting** | `n_estimators=150`, `learning_rate=0.05`, `max_depth=5` | **25,841.48** | **2.58** | **36,890.10** | **0.2929** | **🏆 Staging** |
+
+### Platform Architectural & Feature Comparison
+
+| Feature Dimension | MLflow | Weights & Biases (W&B) |
+| :--- | :--- | :--- |
+| **Deployment Model** | Open Source / Local DB (`mlruns/` or SQLite/Postgres) | Cloud SaaS (`wandb.ai`) with `WANDB_MODE=offline` support |
+| **Model Registry & Staging** | Native Model Registry (`CropYieldModel` promoted to `Staging`) | W&B Model Artifact & Registry versioning |
+| **Tracking Command** | `python -m prodml.mlflow_tracker` | `python -m prodml.wandb_tracker` |
+| **Artifact Storage** | Local directory (`mlruns/`) or S3 / GCS | W&B Cloud Artifact Store |
+| **Visualization UI** | `mlflow ui` (runs locally at `http://localhost:5000`) | Cloud Web UI (`https://wandb.ai/crop-yield-mlops`) |
 
 ---
 

@@ -1,29 +1,33 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status, Query
-from prodml.config import settings
-from prodml.logging import setup_logging, get_logger
-from prodml.model import CropYieldModel
+
+from fastapi import FastAPI, Query, Request, status
+
+from prodml.api.middleware import LoggingAndCorrelationMiddleware
 from prodml.api.schemas import (
-    CropPredictionInput,
-    CropPredictionOutput,
     BatchCropPredictionInput,
     BatchCropPredictionOutput,
+    CropPredictionInput,
+    CropPredictionOutput,
     FeedbackInput,
     FeedbackResponse,
     HealthResponse,
     MetadataResponse,
 )
-from prodml.api.middleware import LoggingAndCorrelationMiddleware
+from prodml.config import settings
+from prodml.logging import get_logger, setup_logging
+from prodml.model import CropYieldModel
 
 setup_logging(settings.LOG_LEVEL)
 logger = get_logger("prodml.app")
 
 ml_model = CropYieldModel(
     model_path=settings.MODEL_PATH,
-    onnx_path=os.path.join(os.path.dirname(settings.MODEL_PATH), "model.onnx")
-    if hasattr(settings, "MODEL_PATH")
-    else "models/model.onnx",
+    onnx_path=(
+        os.path.join(os.path.dirname(settings.MODEL_PATH), "model.onnx")
+        if hasattr(settings, "MODEL_PATH")
+        else "models/model.onnx"
+    ),
 )
 
 

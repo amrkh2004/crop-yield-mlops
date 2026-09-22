@@ -1,0 +1,62 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.prepare
+    deps:
+    - path: src/prodml/data.py
+      hash: md5
+      md5: e7382161193b33d81d3fa5ab2dadb15e
+      size: 1792
+    - path: src/prodml/pipeline/prepare.py
+      hash: md5
+      md5: ea0d8f2201c00acb4a2e1216914bb799
+      size: 1554
+    outs:
+    - path: data/prepared/test.csv
+      hash: md5
+      md5: 3bf4120a75c92a65f4781dd5beb7f2e4
+      size: 14244
+    - path: data/prepared/train.csv
+      hash: md5
+      md5: eab22bc9e0d49bd368ae8874398af395
+      size: 57025
+  train:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.train_stage
+    deps:
+    - path: data/prepared/train.csv
+      hash: md5
+      md5: eab22bc9e0d49bd368ae8874398af395
+      size: 57025
+    - path: src/prodml/features.py
+      hash: md5
+      md5: 57a70c1118b363c5470e98c45cdda0f3
+      size: 1612
+    - path: src/prodml/pipeline/train_stage.py
+      hash: md5
+      md5: 1d96e73d4b3467274bfb357f2bf49ef9
+      size: 1608
+    outs:
+    - path: models/model.pkl
+      hash: md5
+      md5: 153736e3e05c7ebf195cfec1adc94b22
+      size: 628710
+  evaluate:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.evaluate
+    deps:
+    - path: data/prepared/test.csv
+      hash: md5
+      md5: 3bf4120a75c92a65f4781dd5beb7f2e4
+      size: 14244
+    - path: models/model.pkl
+      hash: md5
+      md5: 153736e3e05c7ebf195cfec1adc94b22
+      size: 628710
+    - path: src/prodml/pipeline/evaluate.py
+      hash: md5
+      md5: d3378198036b8ddde39ffe51e6451366
+      size: 1702
+    outs:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 38b20a2736df1e63d4361fce11707508
+      size: 114

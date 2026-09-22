@@ -1,0 +1,28 @@
+stages:
+  prepare:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.prepare
+    deps:
+      - src/prodml/pipeline/prepare.py
+      - src/prodml/data.py
+    outs:
+      - data/prepared/train.csv
+      - data/prepared/test.csv
+
+  train:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.train_stage
+    deps:
+      - src/prodml/pipeline/train_stage.py
+      - src/prodml/features.py
+      - data/prepared/train.csv
+    outs:
+      - models/model.pkl
+
+  evaluate:
+    cmd: .venv\Scripts\python.exe -m prodml.pipeline.evaluate
+    deps:
+      - src/prodml/pipeline/evaluate.py
+      - data/prepared/test.csv
+      - models/model.pkl
+    metrics:
+      - reports/metrics.json:
+          cache: false

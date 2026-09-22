@@ -1,6 +1,7 @@
+from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Tuple, List
 
 FEATURE_NAMES: List[str] = [
     "Area",
@@ -22,9 +23,7 @@ NUMERIC_FEATURES: List[str] = [
 TARGET_NAME: str = "hg/ha_yield"
 
 
-def generate_synthetic_crop_data(
-    n_samples: int = 300, random_state: int = 42
-) -> Tuple[pd.DataFrame, pd.Series]:
+def generate_synthetic_crop_data(n_samples: int = 300, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     """
     Generates a synthetic crop yield dataset matching notebook feature definitions.
     Features: Area, Item, Area_Item, Year, average_rain_fall_mm_per_year, pesticides_tonnes, avg_temp.

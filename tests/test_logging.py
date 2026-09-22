@@ -1,4 +1,4 @@
-from prodml.logging import setup_logging, get_logger
+from prodml.logging import get_logger, setup_logging
 
 
 def test_setup_logging_and_get_logger():

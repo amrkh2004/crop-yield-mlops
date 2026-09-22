@@ -1,7 +1,9 @@
 import os
-import pytest
-import numpy as np
 from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+
 from prodml.model import CropYieldModel
 
 
@@ -37,14 +39,16 @@ def test_model_predict_raises_when_not_loaded():
     """
     model = CropYieldModel(model_path="non_existent.pkl")
     with pytest.raises(RuntimeError, match="Model is not loaded"):
-        model.predict({
-            "Area": "Egypt",
-            "Item": "Wheat",
-            "Year": 2024,
-            "average_rain_fall_mm_per_year": 200.0,
-            "pesticides_tonnes": 50.0,
-            "avg_temp": 25.0,
-        })
+        model.predict(
+            {
+                "Area": "Egypt",
+                "Item": "Wheat",
+                "Year": 2024,
+                "average_rain_fall_mm_per_year": 200.0,
+                "pesticides_tonnes": 50.0,
+                "avg_temp": 25.0,
+            }
+        )
 
 
 def test_model_load_or_create_existing(tmp_path):
@@ -56,8 +60,9 @@ def test_model_load_or_create_existing(tmp_path):
 
     mock_pipeline = MagicMock()
 
-    with patch("os.path.exists", return_value=True), patch(
-        "joblib.load", return_value=mock_pipeline
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("joblib.load", return_value=mock_pipeline),
     ):
         model = CropYieldModel(model_path=str(dummy_model_file))
         model.load_or_create()
@@ -75,13 +80,15 @@ def test_model_load_or_create_fallback_baseline(tmp_path):
     assert model.pipeline is not None
     assert os.path.exists(model_path)
 
-    prediction = model.predict({
-        "Area": "Albania",
-        "Item": "Maize",
-        "Year": 2013,
-        "average_rain_fall_mm_per_year": 1485.0,
-        "pesticides_tonnes": 121.0,
-        "avg_temp": 16.37,
-    })
+    prediction = model.predict(
+        {
+            "Area": "Albania",
+            "Item": "Maize",
+            "Year": 2013,
+            "average_rain_fall_mm_per_year": 1485.0,
+            "pesticides_tonnes": 121.0,
+            "avg_temp": 16.37,
+        }
+    )
     assert "predicted_yield_hg_ha" in prediction
     assert prediction["predicted_yield_hg_ha"] >= 0.0

@@ -1,23 +1,24 @@
 import os
+from typing import Any, Tuple
+
 import joblib
 import numpy as np
-import pandas as pd
-from typing import Tuple, Any
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
-from prodml.data import generate_synthetic_crop_data, FEATURE_NAMES
+
+from prodml.data import generate_synthetic_crop_data
 from prodml.features import build_feature_preprocessor
 
 try:
     from skl2onnx import convert_sklearn, update_registered_converter
-    from skl2onnx.common.data_types import (
-        StringTensorType,
-        FloatTensorType,
-        Int64TensorType,
-    )
     from skl2onnx.algebra.onnx_ops import OnnxAdd, OnnxLog
+    from skl2onnx.common.data_types import (
+        FloatTensorType,
+        StringTensorType,
+    )
     from sklearn.preprocessing import FunctionTransformer
+
     HAS_SKL2ONNX = True
 except ImportError:
     HAS_SKL2ONNX = False
@@ -26,6 +27,7 @@ except ImportError:
 def _register_onnx_log1p_converter():
     if not HAS_SKL2ONNX:
         return
+
     def log1p_shape_calculator(operator):
         operator.outputs[0].type = operator.inputs[0].type
 
@@ -52,9 +54,7 @@ def _register_onnx_log1p_converter():
 _register_onnx_log1p_converter()
 
 
-def train_model_pipeline(
-    n_samples: int = 300, random_state: int = 42
-) -> TransformedTargetRegressor:
+def train_model_pipeline(n_samples: int = 300, random_state: int = 42) -> TransformedTargetRegressor:
     """
     Trains a TransformedTargetRegressor pipeline (log1p target) on crop yield features.
     """
@@ -66,9 +66,7 @@ def train_model_pipeline(
             ("prep", preprocessor),
             (
                 "model",
-                RandomForestRegressor(
-                    n_estimators=100, random_state=random_state, n_jobs=-1
-                ),
+                RandomForestRegressor(n_estimators=100, random_state=random_state, n_jobs=-1),
             ),
         ]
     )
@@ -83,9 +81,7 @@ def train_model_pipeline(
     return model
 
 
-def export_model_onnx(
-    model: Any, output_onnx_path: str
-) -> bool:
+def export_model_onnx(model: Any, output_onnx_path: str) -> bool:
     """
     Exports a trained scikit-learn pipeline or inner regressor to ONNX format.
     """

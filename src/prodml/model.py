@@ -1,13 +1,16 @@
 import os
+from typing import Any, Dict, List, Union
+
 import joblib
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Union
-from prodml.data import FEATURE_NAMES, CATEGORICAL_FEATURES, NUMERIC_FEATURES
-from prodml.train import train_model_pipeline, save_artifacts
+
+from prodml.data import CATEGORICAL_FEATURES, FEATURE_NAMES, NUMERIC_FEATURES
+from prodml.train import save_artifacts, train_model_pipeline
 
 try:
     import onnxruntime as ort
+
     HAS_ONNXRUNTIME = True
 except ImportError:
     HAS_ONNXRUNTIME = False
@@ -51,9 +54,7 @@ class CropYieldModel:
         # Load ONNX session if available
         if HAS_ONNXRUNTIME and os.path.exists(self.onnx_path):
             try:
-                self.ort_session = ort.InferenceSession(
-                    self.onnx_path, providers=["CPUExecutionProvider"]
-                )
+                self.ort_session = ort.InferenceSession(self.onnx_path, providers=["CPUExecutionProvider"])
             except Exception as e:
                 print(f"ONNX session init warning: {e}")
                 self.ort_session = None

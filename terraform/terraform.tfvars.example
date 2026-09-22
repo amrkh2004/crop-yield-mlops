@@ -1,0 +1,4 @@
+aws_region    = "us-east-1"
+bucket_name   = "crop-yield-dvc-remote-store"
+environment   = "production"
+force_destroy = false
