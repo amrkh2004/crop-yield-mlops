@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+
 from prodml.api.app import app
 
 client = TestClient(app)
