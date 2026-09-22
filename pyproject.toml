@@ -50,6 +50,7 @@ include = '\.pyi?$'
 line-length = 120
 target-version = "py39"
 src = ["src", "tests"]
+exclude = ["notebooks", "*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
