@@ -2,17 +2,17 @@ import os
 from datetime import datetime, timedelta
 
 try:
-    from airflow import DAG
-    from airflow.operators.python import PythonOperator
-except ImportError:
+    from airflow import DAG  # type: ignore[import-not-found,import-untyped]
+    from airflow.operators.python import PythonOperator  # type: ignore[import-not-found,import-untyped]
+except (ImportError, ModuleNotFoundError):
     # Airflow fallback mock classes for standalone execution & non-Linux platforms
-    class DAG:
+    class DAG:  # type: ignore[no-redef]
         def __init__(self, dag_id, default_args=None, schedule_interval=None, catchup=False, **kwargs):
             self.dag_id = dag_id
             self.default_args = default_args
             self.schedule_interval = schedule_interval
 
-    class PythonOperator:
+    class PythonOperator:  # type: ignore[no-redef]
         def __init__(self, task_id, python_callable, dag=None, **kwargs):
             self.task_id = task_id
             self.python_callable = python_callable

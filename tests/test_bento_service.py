@@ -1,5 +1,8 @@
 import asyncio
-from src.bento_service import RideDurationService, PredictRequest, PredictResponse
+try:
+    from src.bento_service import RideDurationService, PredictRequest, PredictResponse
+except (ImportError, ModuleNotFoundError):
+    from bento_service import RideDurationService, PredictRequest, PredictResponse  # type: ignore[import-not-found,import-untyped]
 
 
 def test_bento_service_predict():

@@ -5,8 +5,8 @@ import numpy as np
 
 try:
     from src.consumer import predict_on_event
-except ImportError:
-    from consumer import predict_on_event
+except (ImportError, ModuleNotFoundError):
+    from consumer import predict_on_event  # type: ignore[import-not-found,import-untyped]
 
 
 def run_latency_benchmark(target_rate: int = 100, num_events: int = 500):

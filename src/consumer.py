@@ -22,7 +22,10 @@ def get_model(model_name: str = "RideDurationModel"):
             MODEL = mlflow.pyfunc.load_model(model_uri)
         except Exception as e:
             print(f"[Consumer] MLflow load fallback ({e}). Using baseline RideDurationModel pipeline.")
-            from src.batch_score import BaselineRideDurationModel
+            try:
+                from src.batch_score import BaselineRideDurationModel
+            except ImportError:
+                from batch_score import BaselineRideDurationModel
             MODEL = BaselineRideDurationModel()
     return MODEL
 
