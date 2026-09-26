@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Blue Instance (Baseline Version 1)
+  blue_service:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ride_service_blue
+    environment:
+      - MODEL_VERSION=v1.0.0
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # Green Instance (Canary Version 2)
+  green_service:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ride_service_green
+    environment:
+      - MODEL_VERSION=v2.0.0
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy / Load Balancer
+  canary_proxy:
+    image: nginx:alpine
+    container_name: canary_nginx_proxy
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - blue_service
+      - green_service
+    restart: unless-stopped
