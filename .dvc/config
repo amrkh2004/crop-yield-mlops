@@ -1,2 +1,4 @@
 [core]
-    no_scm = True
+    remote = localstorage
+['remote "localstorage"']
+    url = .dvc/cache

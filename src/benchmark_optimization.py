@@ -1,10 +1,10 @@
+import json
 import os
 import time
-import json
 import tracemalloc
+from typing import Any, Dict
+
 import numpy as np
-import pandas as pd
-from typing import Dict, Any
 
 from prodml.model import CropYieldModel
 
@@ -23,7 +23,8 @@ def prepare_onnx_models(base_model: CropYieldModel) -> tuple[str, str]:
     # Dynamic INT8 Quantization using onnxruntime.quantization
     if os.path.exists(fp32_path) and not os.path.exists(int8_path):
         try:
-            from onnxruntime.quantization import quantize_dynamic, QuantType
+            from onnxruntime.quantization import QuantType, quantize_dynamic
+
             quantize_dynamic(
                 model_input=fp32_path,
                 model_output=int8_path,
@@ -92,7 +93,9 @@ def measure_variant_performance(
 
     return {
         "variant": name,
-        "format": "Pickle (.pkl)" if "pickle" in backend_type else ("ONNX INT8" if "int8" in name.lower() else "ONNX FP32"),
+        "format": (
+            "Pickle (.pkl)" if "pickle" in backend_type else ("ONNX INT8" if "int8" in name.lower() else "ONNX FP32")
+        ),
         "file_size_kb": file_size_kb,
         "peak_ram_mb": max(peak_ram_mb, 0.05),
         "mean_latency_ms": mean_lat,
@@ -120,10 +123,38 @@ def run_benchmark_harness(output_report: str = "reports/optimization_results.jso
     fp32_path, int8_path = prepare_onnx_models(base_model)
 
     test_records = [
-        {"Area": "Albania", "Item": "Maize", "Year": 2013, "average_rain_fall_mm_per_year": 1485.0, "pesticides_tonnes": 121.0, "avg_temp": 16.37},
-        {"Area": "Egypt", "Item": "Wheat", "Year": 2020, "average_rain_fall_mm_per_year": 200.0, "pesticides_tonnes": 45.0, "avg_temp": 24.50},
-        {"Area": "India", "Item": "Rice, paddy", "Year": 2018, "average_rain_fall_mm_per_year": 1150.0, "pesticides_tonnes": 320.0, "avg_temp": 27.10},
-        {"Area": "United States of America", "Item": "Potatoes", "Year": 2021, "average_rain_fall_mm_per_year": 850.0, "pesticides_tonnes": 410.0, "avg_temp": 14.80},
+        {
+            "Area": "Albania",
+            "Item": "Maize",
+            "Year": 2013,
+            "average_rain_fall_mm_per_year": 1485.0,
+            "pesticides_tonnes": 121.0,
+            "avg_temp": 16.37,
+        },
+        {
+            "Area": "Egypt",
+            "Item": "Wheat",
+            "Year": 2020,
+            "average_rain_fall_mm_per_year": 200.0,
+            "pesticides_tonnes": 45.0,
+            "avg_temp": 24.50,
+        },
+        {
+            "Area": "India",
+            "Item": "Rice, paddy",
+            "Year": 2018,
+            "average_rain_fall_mm_per_year": 1150.0,
+            "pesticides_tonnes": 320.0,
+            "avg_temp": 27.10,
+        },
+        {
+            "Area": "United States of America",
+            "Item": "Potatoes",
+            "Year": 2021,
+            "average_rain_fall_mm_per_year": 850.0,
+            "pesticides_tonnes": 410.0,
+            "avg_temp": 14.80,
+        },
     ]
 
     # Benchmark all variants
@@ -145,11 +176,18 @@ def run_benchmark_harness(output_report: str = "reports/optimization_results.jso
     print("\n" + "=" * 90)
     print(" MODULE 4: MODEL OPTIMIZATION JOURNEY TABLE ")
     print("=" * 90)
-    header = f"{'Model Variant':<22} | {'Format':<15} | {'Size (KB)':<10} | {'p95 Lat (ms)':<12} | {'Req/Sec':<10} | {'RAM (MB)':<9} | {'Mean Yield':<10}"
+    header = (
+        f"{'Model Variant':<22} | {'Format':<15} | {'Size (KB)':<10} | "
+        f"{'p95 Lat (ms)':<12} | {'Req/Sec':<10} | {'RAM (MB)':<9} | {'Mean Yield':<10}"
+    )
     print(header)
     print("-" * 90)
     for res in results:
-        line = f"{res['variant']:<22} | {res['format']:<15} | {res['file_size_kb']:<10.2f} | {res['p95_latency_ms']:<12.3f} | {res['throughput_req_sec']:<10.1f} | {res['peak_ram_mb']:<9.2f} | {res['avg_prediction_hg_ha']:<10.2f}"
+        line = (
+            f"{res['variant']:<22} | {res['format']:<15} | {res['file_size_kb']:<10.2f} | "
+            f"{res['p95_latency_ms']:<12.3f} | {res['throughput_req_sec']:<10.1f} | "
+            f"{res['peak_ram_mb']:<9.2f} | {res['avg_prediction_hg_ha']:<10.2f}"
+        )
         print(line)
     print("=" * 90 + "\n")
 

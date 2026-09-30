@@ -2,13 +2,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, module-1-packaging, module-2-tracking-automation, module-3-deployment-serving ]
+    branches: [ main, module-1-packaging, module-2-tracking-automation, module-3-deployment-serving, module-4-optimization-benchmarking, module-5-monitoring-drift ]
   pull_request:
     branches: [ main ]
 
 jobs:
   lint-and-test:
-    name: Code Linting & Unit Testing
+    name: Code Quality Gate & Automated Testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -25,9 +25,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      - name: Run Pytest Suite
+      - name: Code Quality Gate (Ruff Linting)
         run: |
-          pytest --cov=src --cov-report=term-missing
+          ruff check .
+
+      - name: Code Formatting Check (Black)
+        run: |
+          black --check .
+
+      - name: Run Pytest Suite with Coverage Enforcement
+        run: |
+          pytest --cov=src --cov-report=term-missing --cov-fail-under=70
 
   docker-build-push:
     name: Docker Build & Push

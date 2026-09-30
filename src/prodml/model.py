@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 
 from prodml.data import CATEGORICAL_FEATURES, FEATURE_NAMES, NUMERIC_FEATURES
+from prodml.logging import get_logger
 from prodml.train import save_artifacts, train_model_pipeline
+
+logger = get_logger("prodml.model")
 
 try:
     import onnxruntime as ort
@@ -56,7 +59,7 @@ class CropYieldModel:
             try:
                 self.ort_session = ort.InferenceSession(self.onnx_path, providers=["CPUExecutionProvider"])
             except Exception as e:
-                print(f"ONNX session init warning: {e}")
+                logger.warning("onnx_session_init_warning", error=str(e))
                 self.ort_session = None
 
     def predict(

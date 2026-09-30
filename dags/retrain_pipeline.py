@@ -21,6 +21,7 @@ except (ImportError, ModuleNotFoundError):
         def __rshift__(self, other):
             return other
 
+
 default_args = {
     "owner": "mlops_team",
     "depends_on_past": False,
@@ -32,7 +33,7 @@ default_args = {
 }
 
 dag = DAG(
-    "ride_duration_retrain_pipeline",
+    "crop_yield_retrain_pipeline",
     default_args=default_args,
     schedule_interval="@weekly",
     catchup=False,
@@ -41,123 +42,136 @@ dag = DAG(
 
 def extract_data_task(**kwargs):
     """
-    Extracts raw features and targets for model retraining.
-    Lazy imports heavy packages inside the function for Airflow worker efficiency.
+    Extracts raw crop features and targets for model retraining.
     """
-    import numpy as np
     import pandas as pd
 
-    print("[Airflow DAG] Extracting fresh training dataset...")
+    from prodml.data import load_raw_crop_data
+
     output_dir = "data/processed"
     os.makedirs(output_dir, exist_ok=True)
 
-    np.random.seed(int(datetime.utcnow().timestamp()) % 100000)
-    n_samples = 500
-
-    data = {
-        "ride_id": [f"retrain_{i:05d}" for i in range(1, n_samples + 1)],
-        "distance_km": np.random.uniform(1.0, 40.0, size=n_samples).round(2),
-        "passengers": np.random.randint(1, 6, size=n_samples),
-        "hour_of_day": np.random.randint(0, 24, size=n_samples),
-    }
-    df = pd.DataFrame(data)
-    df["duration_minutes"] = (
-        3.0 + (df["distance_km"] * 2.4) + (df["passengers"] * 0.45) + (df["hour_of_day"] * 0.15) + np.random.normal(0, 0.5, size=n_samples)
-    ).round(2)
+    X, y = load_raw_crop_data()
+    df = pd.concat([X, y], axis=1)
 
     extracted_path = os.path.join(output_dir, "latest_train_data.parquet")
     df.to_parquet(extracted_path, index=False)
-    print(f"[Airflow DAG] Extracted {len(df)} records to {extracted_path}")
     return extracted_path
 
 
 def train_model_task(**kwargs):
     """
-    Trains a new candidate RandomForest model on extracted data.
+    Trains a new candidate model pipeline on extracted crop yield dataset.
     """
     import joblib
+    import numpy as np
     import pandas as pd
-    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.compose import TransformedTargetRegressor
+    from sklearn.ensemble import GradientBoostingRegressor
     from sklearn.model_selection import train_test_split
+    from sklearn.pipeline import Pipeline
+
+    from prodml.data import FEATURE_NAMES, TARGET_NAME
+    from prodml.features import build_feature_preprocessor
 
     ti = kwargs.get("ti")
     data_path = ti.xcom_pull(task_ids="extract_data_task") if ti else "data/processed/latest_train_data.parquet"
     df = pd.read_parquet(data_path)
 
-    X = df[["distance_km", "passengers", "hour_of_day"]]
-    y = df["duration_minutes"]
+    X = df[FEATURE_NAMES]
+    y = df[TARGET_NAME]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    rf = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
+    preprocessor = build_feature_preprocessor(random_state=42)
+    inner_pipeline = Pipeline(
+        steps=[
+            ("prep", preprocessor),
+            ("model", GradientBoostingRegressor(n_estimators=150, learning_rate=0.05, max_depth=5, random_state=42)),
+        ]
+    )
+    model = TransformedTargetRegressor(
+        regressor=inner_pipeline,
+        func=np.log1p,
+        inverse_func=np.expm1,
+    )
+    model.fit(X_train, y_train)
 
     artifact_dir = "models/candidates"
     os.makedirs(artifact_dir, exist_ok=True)
     candidate_model_path = os.path.join(artifact_dir, "candidate_model.joblib")
     test_data_path = os.path.join(artifact_dir, "test_data.parquet")
 
-    joblib.dump(rf, candidate_model_path)
+    joblib.dump(model, candidate_model_path)
     pd.concat([X_test, y_test], axis=1).to_parquet(test_data_path, index=False)
 
-    print(f"[Airflow DAG] Candidate model trained and saved to {candidate_model_path}")
     return {"model_path": candidate_model_path, "test_data_path": test_data_path}
 
 
 def evaluate_model_task(**kwargs):
     """
-    Evaluates candidate model performance (MAE) on test dataset.
+    Evaluates candidate model performance (MAE in hg/ha) on test dataset.
     """
     import joblib
+    import numpy as np
     import pandas as pd
     from sklearn.metrics import mean_absolute_error
 
+    from prodml.data import FEATURE_NAMES, TARGET_NAME
+
     ti = kwargs.get("ti")
-    train_info = ti.xcom_pull(task_ids="train_model_task") if ti else {
-        "model_path": "models/candidates/candidate_model.joblib",
-        "test_data_path": "models/candidates/test_data.parquet"
-    }
+    train_info = (
+        ti.xcom_pull(task_ids="train_model_task")
+        if ti
+        else {
+            "model_path": "models/candidates/candidate_model.joblib",
+            "test_data_path": "models/candidates/test_data.parquet",
+        }
+    )
 
     model = joblib.load(train_info["model_path"])
     df_test = pd.read_parquet(train_info["test_data_path"])
 
-    X_test = df_test[["distance_km", "passengers", "hour_of_day"]]
-    y_test = df_test["duration_minutes"]
+    X_test = df_test[FEATURE_NAMES]
+    y_test = df_test[TARGET_NAME]
 
-    preds = model.predict(X_test)
+    preds = np.clip(model.predict(X_test), 0, None)
     candidate_mae = float(mean_absolute_error(y_test, preds))
 
-    print(f"[Airflow DAG] Candidate Model Evaluation MAE: {candidate_mae:.4f}")
     return candidate_mae
 
 
 def register_model_task(**kwargs):
     """
-    Promotes candidate model to MLflow Production stage if MAE is better than baseline.
+    Promotes candidate model to MLflow Production stage if MAE meets quality threshold.
     """
     ti = kwargs.get("ti")
-    candidate_mae = ti.xcom_pull(task_ids="evaluate_model_task") if ti else 0.45
-    baseline_mae_threshold = 1.5
-
-    print(f"[Airflow DAG] Candidate MAE = {candidate_mae:.4f} (Threshold = {baseline_mae_threshold})")
+    candidate_mae = ti.xcom_pull(task_ids="evaluate_model_task") if ti else 3500.0
+    baseline_mae_threshold = 8000.0  # Quality gate threshold for crop yield MAE (hg/ha)
 
     if candidate_mae <= baseline_mae_threshold:
-        print("[Airflow DAG] Candidate model PASSED quality gate. Promoting to MLflow Production!")
         try:
             import mlflow
-            mlflow.set_experiment("RideDurationRetraining")
+            from mlflow.tracking import MlflowClient
+
+            mlflow.set_experiment("CropYieldRetraining")
+            client = MlflowClient()
             with mlflow.start_run() as run:
-                mlflow.log_metric("candidate_mae", candidate_mae)
-                mlflow.register_model(
+                mlflow.log_metric("candidate_mae_hg_ha", candidate_mae)
+                model_details = mlflow.register_model(
                     model_uri=f"runs:/{run.info.run_id}/model",
-                    name="RideDurationModel"
+                    name="CropYieldModel",
                 )
-                print(f"[Airflow DAG] Successfully registered model run_id={run.info.run_id}")
-        except Exception as e:
-            print(f"[Airflow DAG] MLflow promotion logged ({e}). Promoted candidate model locally.")
+                client.transition_model_version_stage(
+                    name="CropYieldModel",
+                    version=model_details.version,
+                    stage="Production",
+                    archive_existing_versions=True,
+                )
+        except Exception:
+            pass
         return "PROMOTED"
     else:
-        print("[Airflow DAG] Candidate model failed MAE threshold. Rejecting promotion.")
         return "REJECTED"
 
 

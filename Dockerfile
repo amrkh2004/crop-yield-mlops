@@ -5,9 +5,10 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install system build tools if necessary
+# Install system build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtualenv for isolation
@@ -27,6 +28,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 FROM python:3.11-slim AS runtime
 
 WORKDIR /app
+
+# Install runtime utilities (curl for container healthchecks)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create unprivileged non-root user (appuser) for security
 RUN groupadd -g 1000 appgroup && \
@@ -53,6 +59,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
 USER appuser
 
 EXPOSE 8000
+
+# Healthcheck definition
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Run FastAPI server with Uvicorn
 CMD ["uvicorn", "prodml.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

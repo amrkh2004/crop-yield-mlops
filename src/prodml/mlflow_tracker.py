@@ -1,3 +1,9 @@
+"""
+MLflow Experiment Tracking and Model Registry Management for Crop Yield Service.
+Runs 5+ candidate model experiments on real Kaggle crop yield data, logs metrics/params/tags,
+registers top performing model to MLflow Registry, and promotes to 'Production' stage.
+"""
+
 from typing import Any, Dict
 
 import mlflow
@@ -6,14 +12,22 @@ import numpy as np
 import pandas as pd
 from mlflow.tracking import MlflowClient
 from sklearn.compose import TransformedTargetRegressor
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import Ridge
+from sklearn.ensemble import (
+    ExtraTreesRegressor,
+    GradientBoostingRegressor,
+    RandomForestRegressor,
+)
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
+from sklearn.tree import DecisionTreeRegressor
 
-from prodml.data import generate_synthetic_crop_data
+from prodml.data import load_raw_crop_data
 from prodml.features import build_feature_preprocessor
+from prodml.logging import get_logger
 from prodml.train import save_artifacts
+
+logger = get_logger("prodml.mlflow_tracker")
 
 
 def evaluate_model(model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
@@ -37,26 +51,38 @@ def evaluate_model(model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[
 def run_mlflow_experiments(
     experiment_name: str = "Crop_Yield_Prediction",
     registered_model_name: str = "CropYieldModel",
+    raw_data_path: str = "data/raw/crop_yield_raw.csv",
 ) -> Dict[str, Any]:
     """
-    Runs 3 distinct ML model experiments, logs metrics/params/artifacts to MLflow,
-    and registers the best model to 'Staging'.
+    Runs 6 distinct ML candidate model experiments on real data,
+    logs metrics, parameters, tags, and artifacts to MLflow,
+    and promotes the top model to 'Production' stage in MLflow Model Registry.
     """
     mlflow.set_experiment(experiment_name)
     client = MlflowClient()
 
-    # Generate synthetic dataset for reproducible tracking
-    X, y = generate_synthetic_crop_data(n_samples=500, random_state=42)
+    # Load real Kaggle crop yield dataset
+    X, y = load_raw_crop_data(filepath=raw_data_path)
     split_idx = int(len(X) * 0.8)
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
-    # Define 3 model candidates
+    # Define 6 candidate architectures
     experiments = [
         {
             "name": "Ridge_Baseline",
             "model": Ridge(alpha=1.0),
             "params": {"model_type": "Ridge", "alpha": 1.0},
+        },
+        {
+            "name": "Linear_Regression",
+            "model": LinearRegression(),
+            "params": {"model_type": "LinearRegression"},
+        },
+        {
+            "name": "Decision_Tree_Depth10",
+            "model": DecisionTreeRegressor(max_depth=10, random_state=42),
+            "params": {"model_type": "DecisionTree", "max_depth": 10},
         },
         {
             "name": "Random_Forest_Tuned",
@@ -72,6 +98,11 @@ def run_mlflow_experiments(
                 "learning_rate": 0.05,
                 "max_depth": 5,
             },
+        },
+        {
+            "name": "Extra_Trees",
+            "model": ExtraTreesRegressor(n_estimators=100, max_depth=15, random_state=42, n_jobs=-1),
+            "params": {"model_type": "ExtraTrees", "n_estimators": 100, "max_depth": 15},
         },
     ]
 
@@ -97,6 +128,8 @@ def run_mlflow_experiments(
             mlflow.log_params(params)
             mlflow.log_metrics(metrics)
             mlflow.set_tag("experiment_type", "crop_yield_pipeline")
+            mlflow.set_tag("dataset", "kaggle_crop_yield_real")
+            mlflow.set_tag("author", "mlops_team")
 
             mlflow.sklearn.log_model(
                 sk_model=pipeline_model,
@@ -113,37 +146,48 @@ def run_mlflow_experiments(
                 }
             )
 
-            print(f"[OK] Completed Run: {run_name} | MAE (hg/ha): {metrics['MAE_hg_ha']} | R2: {metrics['R2']}")
+            logger.info(
+                "mlflow_run_completed",
+                run_name=run_name,
+                run_id=run.info.run_id,
+                mae_hg_ha=metrics["MAE_hg_ha"],
+                r2=metrics["R2"],
+            )
 
-    # Find best model (lowest MAE)
-    best_run = min(runs_info, key=lambda r: r["metrics"]["MAE_hg_ha"])
-    print(f"\n[BEST MODEL] {best_run['run_name']} with MAE: {best_run['metrics']['MAE_hg_ha']} hg/ha")
+    # Best model selection (highest R2 / lowest MAE)
+    best_run = max(runs_info, key=lambda r: r["metrics"]["R2"])
+    logger.info(
+        "best_model_selected",
+        run_name=best_run["run_name"],
+        mae_hg_ha=best_run["metrics"]["MAE_hg_ha"],
+        r2=best_run["metrics"]["R2"],
+    )
 
-    # Register best model to MLflow Model Registry and assign stage 'Staging'
+    # Register best model in MLflow Registry and transition stage to Production
     model_uri = f"runs:/{best_run['run_id']}/model"
     model_details = mlflow.register_model(model_uri=model_uri, name=registered_model_name)
 
-    # Assign stage 'Staging' and alias 'Staging'
+    # Promote model to 'Production' stage & assign 'Production' alias
     try:
         client.transition_model_version_stage(
             name=registered_model_name,
             version=model_details.version,
-            stage="Staging",
+            stage="Production",
             archive_existing_versions=True,
         )
     except Exception as e:
-        print(f"Stage transition notice: {e}")
+        logger.warning("stage_transition_notice", error=str(e))
 
     try:
         client.set_registered_model_alias(
             name=registered_model_name,
-            alias="Staging",
+            alias="Production",
             version=model_details.version,
         )
     except Exception as e:
-        print(f"Alias registration notice: {e}")
+        logger.warning("alias_registration_notice", error=str(e))
 
-    # Export best model as primary local model artifact for API
+    # Export best model as primary local model artifact
     save_artifacts(best_run["model"], pkl_path="models/model.pkl", onnx_path="models/model.onnx")
 
     return {
@@ -151,14 +195,17 @@ def run_mlflow_experiments(
         "best_model_name": best_run["run_name"],
         "best_metrics": best_run["metrics"],
         "registered_version": model_details.version,
+        "total_runs": len(experiments),
     }
 
 
 if __name__ == "__main__":
-    print("Executing MLflow Experiment Runs & Staging Registration...")
     result = run_mlflow_experiments()
-    print("\n--- MLflow Tracking Summary ---")
-    print("Registered Model Name: CropYieldModel")
-    print(f"Staging Model Version: {result['registered_version']}")
-    print(f"Best Model Architecture: {result['best_model_name']}")
-    print(f"Best MAE (hg/ha): {result['best_metrics']['MAE_hg_ha']}")
+    logger.info(
+        "mlflow_tracking_summary",
+        registered_model="CropYieldModel",
+        production_version=result["registered_version"],
+        best_architecture=result["best_model_name"],
+        best_mae=result["best_metrics"]["MAE_hg_ha"],
+        total_runs=result["total_runs"],
+    )

@@ -1,38 +1,45 @@
-import random
 import json
-from locust import HttpUser, task, between
+import random
+
+from locust import HttpUser, between, task
 
 
-class RideDurationLoadTestUser(HttpUser):
+class CropYieldLoadTestUser(HttpUser):
     """
-    Locust load test user simulating client traffic against Ride Duration service.
+    Locust load test user simulating client traffic against Crop Yield service.
     """
-    wait_time = between(0.5, 2.0)
 
-    @task(3)
+    wait_time = between(0.1, 1.0)
+
+    AREAS = ["Egypt", "India", "Brazil", "United States of America", "Albania"]
+    ITEMS = ["Potatoes", "Wheat", "Maize", "Rice, paddy", "Sorghum"]
+
+    @task(4)
     def predict_endpoint(self):
         """
-        Sends realistic ride payload to /predict endpoint.
+        Sends realistic crop yield payload to /predict endpoint.
         """
         payload = {
-            "distance_km": round(random.uniform(1.0, 45.0), 2),
-            "passengers": random.randint(1, 6),
-            "hour_of_day": random.randint(0, 23)
+            "area": random.choice(self.AREAS),
+            "item": random.choice(self.ITEMS),
+            "year": random.randint(1990, 2024),
+            "average_rain_fall_mm_per_year": round(random.uniform(300.0, 1800.0), 2),
+            "pesticides_tonnes": round(random.uniform(10.0, 500.0), 2),
+            "avg_temp": round(random.uniform(12.0, 35.0), 2),
         }
         headers = {"Content-Type": "application/json"}
 
-        # BentoML batch endpoint accepts a list or single object based on schema
         with self.client.post(
             "/predict",
-            data=json.dumps([payload]),
+            data=json.dumps(payload),
             headers=headers,
             catch_response=True,
-            name="/predict"
+            name="/predict",
         ) as response:
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    if isinstance(data, list) and len(data) > 0:
+                    if "predicted_yield_hg_ha" in data or (isinstance(data, list) and len(data) > 0):
                         response.success()
                     else:
                         response.failure(f"Unexpected JSON structure: {data}")
@@ -46,7 +53,7 @@ class RideDurationLoadTestUser(HttpUser):
         """
         Health probe request with lower task weight.
         """
-        with self.client.get("/healthz", catch_response=True, name="/healthz") as response:
+        with self.client.get("/health", catch_response=True, name="/health") as response:
             if response.status_code == 200:
                 response.success()
             else:

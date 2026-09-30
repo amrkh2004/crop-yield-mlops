@@ -1,89 +1,104 @@
+from typing import Any, Dict, List
+
 import bentoml
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
 
 
-class PredictRequest(BaseModel):
-    distance_km: float = Field(
-        ...,
-        gt=0,
-        description="Trip distance in kilometers",
-        json_schema_extra={"example": 12.5},
+class CropPredictRequest(BaseModel):
+    area: str = Field(..., description="Country name", json_schema_extra={"example": "Egypt"})
+    item: str = Field(..., description="Crop item", json_schema_extra={"example": "Potatoes"})
+    year: int = Field(..., ge=1990, le=2030, description="Crop year", json_schema_extra={"example": 2023})
+    average_rain_fall_mm_per_year: float = Field(
+        ..., ge=0.0, description="Average rainfall (mm/year)", json_schema_extra={"example": 760.5}
     )
-    passengers: int = Field(
-        ...,
-        ge=1,
-        le=8,
-        description="Number of passengers",
-        json_schema_extra={"example": 2},
+    pesticides_tonnes: float = Field(
+        ..., ge=0.0, description="Pesticides used (tonnes)", json_schema_extra={"example": 91.3}
     )
-    hour_of_day: int = Field(
-        ...,
-        ge=0,
-        le=23,
-        description="Hour of the day (0-23)",
-        json_schema_extra={"example": 14},
+    avg_temp: float = Field(
+        ..., ge=-10.0, le=60.0, description="Average temperature (C)", json_schema_extra={"example": 24.5}
     )
 
 
-class PredictResponse(BaseModel):
-    predicted_duration_minutes: float = Field(..., description="Predicted trip duration in minutes")
+class CropPredictResponse(BaseModel):
+    predicted_yield_hg_ha: float = Field(..., description="Predicted crop yield in hg/ha")
+    predicted_yield_tons_ha: float = Field(..., description="Predicted crop yield in tons/ha")
     status: str = Field(default="success", description="Prediction status")
 
 
-# Modern BentoML 1.2+ Service Definition
 @bentoml.service(
-    name="ride_duration_service",
+    name="crop_yield_service",
     resources={"cpu": "2"},
-    traffic={"timeout": 10}
+    traffic={"timeout": 10},
 )
-class RideDurationService:
+class CropYieldService:
     """
-    BentoML Service for Ride Duration Prediction with micro-batching support.
+    BentoML Service for Crop Yield Prediction with adaptive micro-batching support.
     """
 
     def __init__(self):
-        # Load model pipeline or fallback
         try:
             import mlflow.pyfunc
-            model_uri = "models:/RideDurationModel/Production"
+
+            model_uri = "models:/CropYieldModel/Production"
             self.model = mlflow.pyfunc.load_model(model_uri)
-            print(f"[BentoML] Successfully loaded model from MLflow Registry: {model_uri}")
-        except Exception as e:
-            print(f"[BentoML] MLflow load fallback ({e}). Using baseline Scikit-Learn predictor.")
-            from sklearn.ensemble import RandomForestRegressor
-            X_dummy = np.array([[5.0, 2, 14], [10.0, 1, 8], [2.5, 3, 18]])
-            y_dummy = np.array([16.5, 28.0, 10.2])
-            rf = RandomForestRegressor(n_estimators=10, random_state=42)
-            rf.fit(X_dummy, y_dummy)
-            self.model = rf
+        except Exception:
+            import os
+
+            import joblib
+
+            model_path = "models/model.pkl"
+            if os.path.exists(model_path):
+                self.model = joblib.load(model_path)
+            else:
+                from prodml.train import train_model_pipeline
+
+                self.model = train_model_pipeline()
 
     @bentoml.api(batchable=True, batch_dim=0)
-    async def predict(self, requests: List[PredictRequest]) -> List[PredictResponse]:
+    async def predict(self, requests: List[CropPredictRequest]) -> List[CropPredictResponse]:
         """
-        Async micro-batched prediction endpoint.
-        Receives a batch of requests and executes inference concurrently.
+        Async micro-batched prediction endpoint for crop yield inference.
         """
-        data = [req.model_dump() for req in requests]
-        df = pd.DataFrame(data)
+        input_dicts = []
+        for req in requests:
+            input_dicts.append(
+                {
+                    "Area": req.area,
+                    "Item": req.item,
+                    "Area_Item": f"{req.area}_{req.item}",
+                    "Year": req.year,
+                    "average_rain_fall_mm_per_year": req.average_rain_fall_mm_per_year,
+                    "pesticides_tonnes": req.pesticides_tonnes,
+                    "avg_temp": req.avg_temp,
+                }
+            )
+
+        df = pd.DataFrame(input_dicts)
 
         if hasattr(self.model, "predict"):
-            predictions = self.model.predict(df)
+            preds = self.model.predict(df)
         else:
-            predictions = self.model(df)
+            preds = self.model(df)
 
         results = []
-        for pred in predictions:
-            val = float(np.round(pred, 2))
-            results.append(PredictResponse(predicted_duration_minutes=val, status="success"))
+        for pred in preds:
+            val_hg = float(np.round(np.clip(pred, 0, None), 2))
+            val_tons = float(np.round(val_hg / 10000.0, 4))
+            results.append(
+                CropPredictResponse(
+                    predicted_yield_hg_ha=val_hg,
+                    predicted_yield_tons_ha=val_tons,
+                    status="success",
+                )
+            )
 
         return results
 
     @bentoml.api
     async def healthz(self) -> Dict[str, Any]:
         """
-        Health probe endpoint for load balancing readiness.
+        Health probe endpoint for service readiness.
         """
-        return {"status": "healthy", "service": "ride_duration_service"}
+        return {"status": "healthy", "service": "crop_yield_service"}

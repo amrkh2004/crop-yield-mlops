@@ -1,12 +1,11 @@
 import time
-import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def run_vllm_benchmark(
     base_url: str = "http://localhost:8000/v1",
     model_name: str = "Qwen/Qwen2.5-7B-Instruct",
-    prompt: str = "Explain how machine learning model serving works in MLOps."
+    prompt: str = "Explain how machine learning model serving works in MLOps.",
 ) -> Dict[str, Any]:
     """
     Connects to vLLM OpenAI-compatible server, enables streaming mode,
@@ -48,21 +47,21 @@ def run_vllm_benchmark(
         gen_duration = end_time - (first_token_time or start_time)
         throughput = round(token_count / gen_duration, 2) if gen_duration > 0 else 0.0
 
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("vLLM SERVING BENCHMARK METRICS")
-        print("="*50)
+        print("=" * 50)
         print(f"Time To First Token (TTFT) : {ttft_ms} ms")
         print(f"Total Generated Tokens     : {token_count}")
         print(f"Generation Throughput      : {throughput} tokens/sec")
         print(f"Total Request Duration     : {round(total_duration, 3)} sec")
-        print("="*50 + "\n")
+        print("=" * 50 + "\n")
 
         return {
             "status": "success",
             "ttft_ms": ttft_ms,
             "token_count": token_count,
             "throughput_tokens_per_sec": throughput,
-            "total_duration_sec": round(total_duration, 3)
+            "total_duration_sec": round(total_duration, 3),
         }
 
     except Exception as e:
@@ -79,19 +78,19 @@ def run_vllm_benchmark(
         ttft_ms = round((t_first - t0) * 1000, 2)
         throughput = round(simulated_tokens / (t_end - t_first), 2)
 
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("vLLM SERVING MOCK BENCHMARK METRICS")
-        print("="*50)
+        print("=" * 50)
         print(f"Time To First Token (TTFT) : {ttft_ms} ms")
         print(f"Total Generated Tokens     : {simulated_tokens}")
         print(f"Generation Throughput      : {throughput} tokens/sec")
-        print("="*50 + "\n")
+        print("=" * 50 + "\n")
 
         return {
             "status": "mock_success",
             "ttft_ms": ttft_ms,
             "token_count": simulated_tokens,
-            "throughput_tokens_per_sec": throughput
+            "throughput_tokens_per_sec": throughput,
         }
 
 

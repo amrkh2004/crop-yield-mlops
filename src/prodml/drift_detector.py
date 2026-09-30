@@ -8,6 +8,7 @@ import os
 
 import pandas as pd
 import scipy.stats as stats
+
 from prodml.logging import get_logger
 from prodml.metrics import DATA_DRIFT_SCORE, DRIFT_DETECTED
 
@@ -84,13 +85,7 @@ class DataDriftDetector:
 
                 # Total Variation Distance (TVD)
                 all_cats = set(ref_counts.index).union(set(cur_counts.index))
-                tvd = (
-                    0.5
-                    * sum(
-                        abs(ref_counts.get(cat, 0.0) - cur_counts.get(cat, 0.0))
-                        for cat in all_cats
-                    )
-                )
+                tvd = 0.5 * sum(abs(ref_counts.get(cat, 0.0) - cur_counts.get(cat, 0.0)) for cat in all_cats)
                 stat_scores.append(float(tvd))
                 is_drift = bool(tvd > 0.2)  # Threshold for TVD drift
                 if is_drift:
@@ -103,9 +98,7 @@ class DataDriftDetector:
                     "drift_detected": is_drift,
                 }
 
-        overall_drift_score = (
-            sum(stat_scores) / len(stat_scores) if stat_scores else 0.0
-        )
+        overall_drift_score = sum(stat_scores) / len(stat_scores) if stat_scores else 0.0
         overall_drift_detected = drift_count > 0
 
         report = {
@@ -159,9 +152,7 @@ class DataDriftDetector:
             )
             # Create a clean fallback HTML file
             os.makedirs(os.path.dirname(export_html_path), exist_ok=True)
-            drift_summary = self.detect_drift(
-                reference_df, current_df, export_json_path=None
-            )
+            drift_summary = self.detect_drift(reference_df, current_df, export_json_path=None)
             html_content = f"""
             <!DOCTYPE html>
             <html>
@@ -181,7 +172,9 @@ class DataDriftDetector:
                 <h1>Crop Yield Model - Data Drift Monitoring Report</h1>
                 <div class="card">
                     <h2>Overall Status</h2>
-                    <p>Drift Detected: <span class="{ 'status-drift' if drift_summary['drift_detected'] else 'status-pass' }">
+                    <p>Drift Detected: <span class="{
+                        'status-drift' if drift_summary['drift_detected'] else 'status-pass'
+                    }">
                         { drift_summary['drift_detected'] }</span></p>
                     <p>Overall Drift Score: { drift_summary['overall_drift_score'] }</p>
                     <p>Retraining Recommended: { drift_summary['retraining_recommended'] }</p>

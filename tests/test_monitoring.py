@@ -2,8 +2,9 @@
 Unit and Integration Tests for Prometheus Metrics Endpoint and Data Drift Detection.
 """
 
-import os
 import json
+import os
+
 import pandas as pd
 from fastapi.testclient import TestClient
 
@@ -41,21 +42,26 @@ def test_prediction_telemetry():
 
     metrics_resp = client.get("/metrics")
     assert response.status_code == 200
-    assert 'crop_yield_prediction_requests_total{backend="pickle",endpoint="/predict",status="success"}' in metrics_resp.text
+    assert (
+        'crop_yield_prediction_requests_total{backend="pickle",endpoint="/predict",status="success"}'
+        in metrics_resp.text
+    )
 
 
 def test_data_drift_detector_normal(tmp_path):
     """
     Verify DataDriftDetector returns drift_detected=False for identical reference/current distributions.
     """
-    ref_df = pd.DataFrame({
-        "Year": [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019],
-        "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0, 102.0, 106.0, 109.0, 111.0, 104.0],
-        "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5, 20.5, 21.5, 22.0, 23.5, 21.0],
-        "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8, 20.1, 20.6, 20.4, 20.9, 20.3],
-        "Area": ["Egypt"] * 10,
-        "Item": ["Maize"] * 10,
-    })
+    ref_df = pd.DataFrame(
+        {
+            "Year": [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019],
+            "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0, 102.0, 106.0, 109.0, 111.0, 104.0],
+            "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5, 20.5, 21.5, 22.0, 23.5, 21.0],
+            "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8, 20.1, 20.6, 20.4, 20.9, 20.3],
+            "Area": ["Egypt"] * 10,
+            "Item": ["Maize"] * 10,
+        }
+    )
 
     detector = DataDriftDetector(p_value_threshold=0.05)
     report_path = str(tmp_path / "test_drift_normal.json")
@@ -74,14 +80,16 @@ def test_data_drift_detector_shifted(tmp_path):
     """
     Verify DataDriftDetector flags drift when feature distributions are significantly shifted.
     """
-    ref_df = pd.DataFrame({
-        "Year": [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019],
-        "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0, 102.0, 106.0, 109.0, 111.0, 104.0],
-        "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5, 20.5, 21.5, 22.0, 23.5, 21.0],
-        "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8, 20.1, 20.6, 20.4, 20.9, 20.3],
-        "Area": ["Egypt"] * 10,
-        "Item": ["Maize"] * 10,
-    })
+    ref_df = pd.DataFrame(
+        {
+            "Year": [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019],
+            "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0, 102.0, 106.0, 109.0, 111.0, 104.0],
+            "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5, 20.5, 21.5, 22.0, 23.5, 21.0],
+            "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8, 20.1, 20.6, 20.4, 20.9, 20.3],
+            "Area": ["Egypt"] * 10,
+            "Item": ["Maize"] * 10,
+        }
+    )
 
     shifted_df = ref_df.copy()
     shifted_df["pesticides_tonnes"] = shifted_df["pesticides_tonnes"] * 10.0

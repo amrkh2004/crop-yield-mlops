@@ -26,3 +26,4 @@ dist/
 mlruns/
 wandb/
 .dvc/cache/
+*.zip

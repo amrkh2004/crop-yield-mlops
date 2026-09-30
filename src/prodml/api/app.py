@@ -247,4 +247,3 @@ async def feedback(payload: FeedbackInput, request: Request):
         message="Feedback successfully recorded for model evaluation",
         request_id=payload.request_id,
     )
-
