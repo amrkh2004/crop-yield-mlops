@@ -1,4 +1,5 @@
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query, Request, status
@@ -16,6 +17,12 @@ from prodml.api.schemas import (
 )
 from prodml.config import settings
 from prodml.logging import get_logger, setup_logging
+from prodml.metrics import (
+    PREDICTED_YIELD_HG_HA,
+    PREDICTION_LATENCY_SECONDS,
+    PREDICTION_REQUESTS_TOTAL,
+    get_metrics_response,
+)
 from prodml.model import CropYieldModel
 
 setup_logging(settings.LOG_LEVEL)
@@ -68,6 +75,14 @@ async def health():
     )
 
 
+@app.get("/metrics")
+async def metrics():
+    """
+    Prometheus metrics endpoint for scraping application telemetry.
+    """
+    return get_metrics_response()
+
+
 @app.get("/metadata", response_model=MetadataResponse, status_code=status.HTTP_200_OK)
 async def metadata():
     """
@@ -99,6 +114,7 @@ async def predict(
     """
     Predict crop yield (hg/ha and tons/ha) for a single input item.
     """
+    start_time = time.perf_counter()
     request_id = getattr(request.state, "request_id", "N/A")
     input_dict = {
         "Area": payload.area,
@@ -109,26 +125,37 @@ async def predict(
         "avg_temp": payload.avg_temp,
     }
 
-    model: CropYieldModel = app.state.model
-    prediction_result = model.predict(input_dict, backend=backend)
+    try:
+        model: CropYieldModel = app.state.model
+        prediction_result = model.predict(input_dict, backend=backend)
+        duration = time.perf_counter() - start_time
 
-    logger.info(
-        "prediction_generated",
-        request_id=request_id,
-        backend=backend,
-        area=payload.area,
-        item=payload.item,
-        predicted_yield_hg_ha=prediction_result["predicted_yield_hg_ha"],
-    )
+        # Track Prometheus Telemetry
+        PREDICTION_REQUESTS_TOTAL.labels(endpoint="/predict", backend=backend, status="success").inc()
+        PREDICTION_LATENCY_SECONDS.labels(endpoint="/predict", backend=backend).observe(duration)
+        PREDICTED_YIELD_HG_HA.labels(item=payload.item).observe(prediction_result["predicted_yield_hg_ha"])
 
-    return CropPredictionOutput(
-        request_id=request_id,
-        area=payload.area,
-        item=payload.item,
-        predicted_yield_hg_ha=prediction_result["predicted_yield_hg_ha"],
-        predicted_yield_tons_ha=prediction_result["predicted_yield_tons_ha"],
-        status="success",
-    )
+        logger.info(
+            "prediction_generated",
+            request_id=request_id,
+            backend=backend,
+            area=payload.area,
+            item=payload.item,
+            predicted_yield_hg_ha=prediction_result["predicted_yield_hg_ha"],
+            latency_ms=round(duration * 1000, 3),
+        )
+
+        return CropPredictionOutput(
+            request_id=request_id,
+            area=payload.area,
+            item=payload.item,
+            predicted_yield_hg_ha=prediction_result["predicted_yield_hg_ha"],
+            predicted_yield_tons_ha=prediction_result["predicted_yield_tons_ha"],
+            status="success",
+        )
+    except Exception as e:
+        PREDICTION_REQUESTS_TOTAL.labels(endpoint="/predict", backend=backend, status="error").inc()
+        raise e
 
 
 @app.post(
@@ -144,6 +171,7 @@ async def predict_batch(
     """
     Batch prediction endpoint for processing multiple crop items simultaneously.
     """
+    start_time = time.perf_counter()
     request_id = getattr(request.state, "request_id", "N/A")
     input_dicts = [
         {
@@ -157,35 +185,45 @@ async def predict_batch(
         for item in payload.inputs
     ]
 
-    model: CropYieldModel = app.state.model
-    batch_results = model.predict(input_dicts, backend=backend)
+    try:
+        model: CropYieldModel = app.state.model
+        batch_results = model.predict(input_dicts, backend=backend)
+        duration = time.perf_counter() - start_time
 
-    outputs = []
-    for item_input, result in zip(payload.inputs, batch_results):
-        outputs.append(
-            CropPredictionOutput(
-                request_id=request_id,
-                area=item_input.area,
-                item=item_input.item,
-                predicted_yield_hg_ha=result["predicted_yield_hg_ha"],
-                predicted_yield_tons_ha=result["predicted_yield_tons_ha"],
-                status="success",
+        outputs = []
+        for item_input, result in zip(payload.inputs, batch_results):
+            outputs.append(
+                CropPredictionOutput(
+                    request_id=request_id,
+                    area=item_input.area,
+                    item=item_input.item,
+                    predicted_yield_hg_ha=result["predicted_yield_hg_ha"],
+                    predicted_yield_tons_ha=result["predicted_yield_tons_ha"],
+                    status="success",
+                )
             )
+
+        # Track Prometheus Telemetry
+        PREDICTION_REQUESTS_TOTAL.labels(endpoint="/predict/batch", backend=backend, status="success").inc()
+        PREDICTION_LATENCY_SECONDS.labels(endpoint="/predict/batch", backend=backend).observe(duration)
+
+        logger.info(
+            "batch_prediction_generated",
+            request_id=request_id,
+            backend=backend,
+            total_items=len(outputs),
+            latency_ms=round(duration * 1000, 3),
         )
 
-    logger.info(
-        "batch_prediction_generated",
-        request_id=request_id,
-        backend=backend,
-        total_items=len(outputs),
-    )
-
-    return BatchCropPredictionOutput(
-        request_id=request_id,
-        predictions=outputs,
-        total_items=len(outputs),
-        status="success",
-    )
+        return BatchCropPredictionOutput(
+            request_id=request_id,
+            predictions=outputs,
+            total_items=len(outputs),
+            status="success",
+        )
+    except Exception as e:
+        PREDICTION_REQUESTS_TOTAL.labels(endpoint="/predict/batch", backend=backend, status="error").inc()
+        raise e
 
 
 @app.post(
@@ -209,3 +247,4 @@ async def feedback(payload: FeedbackInput, request: Request):
         message="Feedback successfully recorded for model evaluation",
         request_id=payload.request_id,
     )
+

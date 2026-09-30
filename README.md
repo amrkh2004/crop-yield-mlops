@@ -1,140 +1,120 @@
-# 🌾 `prodml` - Crop Yield Prediction ML API
+# 🌾 Crop Yield Prediction MLOps Service & Operational Monitoring
 
-[![CI/CD Pipeline](https://github.com/amrkh2004/crop-yield-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/amrkh2004/crop-yield-mlops/actions)
 [![Python Package](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
-[![ONNX Runtime](https://img.shields.io/badge/ONNX-Runtime-blue.svg)](https://onnxruntime.ai/)
-[![Code Coverage](https://img.shields.io/badge/Coverage-92%25-success.svg)](https://pytest.org/)
-[![Docker](https://img.shields.io/badge/Docker-Multi--stage-2496ED.svg)](https://www.docker.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-009688.svg)](https://fastapi.tiangolo.com/)
+[![MLflow](https://img.shields.io/badge/MLflow-Registry-0194E2.svg)](https://mlflow.org/)
+[![DVC](https://img.shields.io/badge/DVC-Pipeline-945DD6.svg)](https://dvc.org/)
+[![BentoML](https://img.shields.io/badge/BentoML-Web%20Service-000000.svg)](https://bentoml.com/)
+[![Airflow](https://img.shields.io/badge/Airflow-DAG-017CEE.svg)](https://airflow.apache.org/)
+[![ONNX](https://img.shields.io/badge/ONNX-INT8%20Quant-005CED.svg)](https://onnxruntime.ai/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Telemetry-E6522C.svg)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Grafana-Dashboard-F46800.svg)](https://grafana.com/)
+[![Evidently AI](https://img.shields.io/badge/Evidently-Data%20Drift-4361EE.svg)](https://evidentlyai.com/)
 
-An enterprise-ready, production-grade Machine Learning REST API for predicting crop yield outputs based on environmental, agricultural, and weather metrics.
-
----
-
-## 📌 Model & Feature Overview
-
-The `prodml` model predicts expected crop yield (measured in **hectograms per hectare `hg/ha`** and **metric tons per hectare `tons/ha`**) using:
-- **Area**: Country or geographical region (e.g., `Egypt`, `Albania`, `India`, `United States of America`).
-- **Item**: Crop type item (e.g., `Wheat`, `Maize`, `Potatoes`, `Rice, paddy`).
-- **Year**: Harvest year (e.g., `2023`).
-- **Average Rain Fall**: Average annual rainfall in millimeters (`average_rain_fall_mm_per_year`).
-- **Pesticides**: Total pesticides usage in tonnes (`pesticides_tonnes`).
-- **Average Temperature**: Average annual temperature in Celsius (`avg_temp`).
+An enterprise-grade, end-to-end MLOps platform for **Crop Yield Prediction**, implementing 3 distinct inference serving patterns (FastAPI/BentoML Web Service, Batch Scorer, Redis Streaming Consumer), driven by **MLflow Model Registry**, **DVC pipelines**, **ONNX Runtime INT8 Optimization**, **Prometheus/Grafana Operational Telemetry**, and **Evidently AI Data Drift Monitoring**.
 
 ---
 
-## ⚡ Quickstart (3 Commands)
+## 📋 10-Point Rubric Completion Summary
 
-Run the entire service locally in 3 quick commands:
+| Module | Feature | Location | Status |
+| :--- | :--- | :--- | :---: |
+| **Module 1** | Python Package (OOP, Type Hints) | [`src/prodml/`](src/prodml) | ✅ COMPLETED |
+| **Module 1** | FastAPI Web Service (`/predict`, `/health`) | [`src/prodml/api/app.py`](src/prodml/api/app.py) | ✅ COMPLETED |
+| **Module 1** | Docker Multi-Stage Build & Compose | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | ✅ COMPLETED |
+| **Module 2** | MLflow Registry & Experiment Tracking | [`src/prodml/train.py`](src/prodml/train.py) | ✅ COMPLETED |
+| **Module 2** | DVC Data Pipeline Versioning | [`dvc.yaml`](dvc.yaml), [`dvc.lock`](dvc.lock) | ✅ COMPLETED |
+| **Module 2** | GitHub Actions CI/CD Quality Gate | [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) | ✅ COMPLETED |
+| **Module 3** | BentoML Adaptive Micro-Batching Service | [`src/bento_service.py`](src/bento_service.py) | ✅ COMPLETED |
+| **Module 3** | Airflow Retraining DAG & Batch Scorer | [`dags/retrain_pipeline.py`](dags/retrain_pipeline.py) | ✅ COMPLETED |
+| **Module 4** | ONNX Quantization & Benchmark Harness | [`src/benchmark_optimization.py`](src/benchmark_optimization.py) | ✅ COMPLETED |
+| **Module 5** | Prometheus, Grafana & Data Drift Detector | [`src/prodml/metrics.py`](src/prodml/metrics.py), [`src/prodml/drift_detector.py`](src/prodml/drift_detector.py) | ✅ COMPLETED |
 
-### 1. Clone & Setup Repository
-```bash
-git clone https://github.com/amrkh2004/crop-yield-mlops.git
-cd crop-yield-mlops
+---
+
+## 🏗️ End-to-End System Architecture
+
+```mermaid
+graph TD
+    subgraph Storage & Registry
+        M[MLflow Model Registry<br>models:/CropYieldModel/Production]
+        DVC[DVC Tracked Data<br>data/raw/crop_yield.csv]
+    end
+
+    subgraph "Inference Pattern 1: FastAPI & BentoML Web Service"
+        C[HTTP Client] -->|POST /predict| API[FastAPI Web Service :8000]
+        C -->|POST /predict| NGINX[Nginx Canary Proxy :3000]
+        NGINX -->|95% Traffic| B1[BentoML Blue v1]
+        NGINX -->|5% Traffic| B2[BentoML Green v2]
+        API -->|Load Model| M
+        B1 -->|Load Model| M
+    end
+
+    subgraph "Inference Pattern 2: Batch Scoring"
+        BS[Batch Scorer src/batch_score.py] -->|Read Parquet| IN[data/scoring/input/]
+        BS -->|Fetch Production Model| M
+        BS -->|Write Parquet + run_date| OUT[data/scoring/output/]
+    end
+
+    subgraph "Inference Pattern 3: Event Streaming"
+        PROD[Event Producer 100 ev/sec] -->|Push Stream| REDIS[Redis Streams]
+        REDIS -->|XREADGROUP| CONS[Redis Consumer consumer.py]
+        CONS -->|Prediction| M
+    end
+
+    subgraph "Observability & Telemetry (Module 5)"
+        API -->|Prometheus Metrics /metrics| PROM[Prometheus Server :9090]
+        PROM -->|Data Source| GRAF[Grafana Operational Dashboard :3000]
+        DRIFT[Evidently & KS Drift Detector] -->|Update Metrics| PROM
+        DRIFT -->|Generate JSON/HTML| REP[reports/drift_report.json]
+    end
+
+    subgraph "Orchestration & Retraining"
+        DAG[Airflow DAG dags/retrain_pipeline.py] -->|extract >> train >> evaluate| EXP[Candidate Model MAE Gate]
+        EXP -->|If MAE <= 1.5| PROM_MODEL[Promote Model to Production]
+        PROM_MODEL --> M
+    end
 ```
 
-### 2. Launch Containerized Service with Docker Compose
-```bash
-docker-compose up -d --build
-```
-
-### 3. Test Prediction Endpoint (Pickle or ONNX)
-```bash
-curl -X POST "http://localhost:8000/predict?backend=onnx" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "area": "Egypt",
-       "item": "Wheat",
-       "year": 2023,
-       "average_rain_fall_mm_per_year": 1200.0,
-       "pesticides_tonnes": 150.0,
-       "avg_temp": 24.5
-     }'
-```
-
 ---
 
-## 🔌 API Endpoints Summary
+## ⚡ Module 4: Model Optimization Journey Table
 
-| Method | Endpoint | Description | Query Params / Body |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/health` | Service readiness probe & model status | None |
-| `GET` | `/metadata` | Model metadata, features, and supported backends | None |
-| `POST` | `/predict` | Single-item yield prediction | `?backend=pickle` or `?backend=onnx` |
-| `POST` | `/predict/batch` | Batch yield prediction for multiple items | `?backend=onnx` |
-| `POST` | `/feedback` | Submit actual yield observations & model feedback | `FeedbackInput` |
-
----
-
-## 📈 Experiment Tracking: MLflow vs Weights & Biases (W&B)
-
-Both **MLflow** and **Weights & Biases (W&B)** tracking engines are integrated into `prodml` to record hyperparameter configurations, evaluation metrics (`MAE`, `RMSE`, `R²`), and model artifacts across candidate architectures.
-
-### Candidate Model Experiments Comparison
-
-| Model Architecture | Key Hyperparameters | MAE (hg/ha) | MAE (t/ha) | RMSE | R² Score | Selected Stage |
+| Model Variant | Format | Disk Size (KB) | p95 Latency (ms) | Throughput (Req/Sec) | Peak RAM (MB) | Speedup vs Baseline |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Ridge Baseline** | `alpha=1.0` | 26,978.89 | 2.70 | 38,150.12 | 0.2588 | Candidate |
-| **Random Forest Tuned** | `n_estimators=100`, `max_depth=15` | 27,150.31 | 2.72 | 39,010.50 | 0.2199 | Candidate |
-| **Gradient Boosting** | `n_estimators=150`, `learning_rate=0.05`, `max_depth=5` | **25,841.48** | **2.58** | **36,890.10** | **0.2929** | **🏆 Staging** |
-
-### Platform Architectural & Feature Comparison
-
-| Feature Dimension | MLflow | Weights & Biases (W&B) |
-| :--- | :--- | :--- |
-| **Deployment Model** | Open Source / Local DB (`mlruns/` or SQLite/Postgres) | Cloud SaaS (`wandb.ai`) with `WANDB_MODE=offline` support |
-| **Model Registry & Staging** | Native Model Registry (`CropYieldModel` promoted to `Staging`) | W&B Model Artifact & Registry versioning |
-| **Tracking Command** | `python -m prodml.mlflow_tracker` | `python -m prodml.wandb_tracker` |
-| **Artifact Storage** | Local directory (`mlruns/`) or S3 / GCS | W&B Cloud Artifact Store |
-| **Visualization UI** | `mlflow ui` (runs locally at `http://localhost:5000`) | Cloud Web UI (`https://wandb.ai/crop-yield-mlops`) |
+| **Baseline Model** | Pickle (`.pkl`) | **633.02 KB** | 19.785 ms | 56.4 req/sec | 1.88 MB | 1.0x (Reference) |
+| **ONNX FP32** | ONNX (`.onnx`) | 1,406.66 KB | **5.653 ms** | **226.7 req/sec** | **0.07 MB** | **3.5x Speedup** ⚡ |
+| **ONNX INT8 Quantized** | ONNX (`.onnx`) | 1,407.10 KB | 6.287 ms | 221.4 req/sec | **0.07 MB** | **3.1x Speedup** ⚡ |
 
 ---
 
-## 📋 Module 1 Deliverables Checklist Status
+## 🚀 3-Command Quickstart Guide
 
-| Required Deliverable | Status |
-| :--- | :--- |
-| GitHub Repository Setup | ✅ Completed |
-| `module-1-packaging` Branch | ✅ Completed |
-| ML Notebook inside `notebooks/` | ✅ Completed |
-| Project Structure (`src/prodml`, `tests`, `reports`, `models`) | ✅ Completed |
-| `config.py` Pydantic Settings | ✅ Completed |
-| Python Package / `pyproject.toml` | ✅ Completed |
-| Data Module (`data.py`) | ✅ Completed |
-| Features Module (`features.py`) | ✅ Completed |
-| Training / Export Code (`train.py`) | ✅ Completed |
-| Structured JSON Logging (`logging.py` & `middleware.py`) | ✅ Completed |
-| Pickle + ONNX Serialization | ✅ Completed |
-| ONNX Parity Test (`test_onnx_parity.py`) | ✅ Completed |
-| Latency Comparison Benchmark | ✅ Completed |
-| FastAPI Application Setup | ✅ Completed |
-| Endpoint `/health` | ✅ Completed |
-| Endpoint `/metadata` | ✅ Completed |
-| Endpoint `/predict` | ✅ Completed |
-| Endpoint `/predict/batch` | ✅ Completed |
-| Pytest Suite (17 tests, 93% coverage) | ✅ Completed |
-| Docker Multi-Stage Build | ✅ Completed |
-| Docker Compose Setup | ✅ Completed |
-| Docker Hub Readiness | ✅ Completed |
-| README 3-Command Guide | ✅ Completed |
-| Deliverables Report (`reports/module-1.md`) | ✅ Completed |
-| PR + Review + Merge Setup | ✅ Completed |
-| `v0.1.0` Release Tag | ✅ Completed |
-
----
-
-## 📊 Structured JSON Logging
-
-Logs are formatted in structured JSON via `structlog`. Every HTTP request includes correlation tracing:
-```json
-{
-  "event": "request_processed",
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "endpoint": "/predict",
-  "method": "POST",
-  "status_code": 200,
-  "latency_ms": 0.38,
-  "timestamp": "2026-09-19T04:30:00.000Z",
-  "level": "info"
-}
+### 1. Install Editable Package & Dependencies
+```bash
+pip install -e .
 ```
+
+### 2. Execute Complete Verification Suite (47 Tests)
+```bash
+pytest
+```
+
+### 3. Launch Docker Stack (API + Prometheus + Grafana)
+```bash
+docker-compose up --build -d
+```
+- **FastAPI Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Prometheus Metrics**: [http://localhost:8000/metrics](http://localhost:8000/metrics)
+- **Prometheus Server**: [http://localhost:9090](http://localhost:9090)
+- **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
+
+---
+
+## 📊 Modules & Verification Documents
+- 📄 [PEER_REVIEW.md](PEER_REVIEW.md) - Peer Reviewer Rubric Verification Checklist
+- 📄 [reports/module-1.md](reports/module-1.md) - Package, FastAPI & Docker Architecture
+- 📄 [reports/module-2.md](reports/module-2.md) - MLflow, DVC & CI/CD Pipelines
+- 📄 [reports/module-3.md](reports/module-3.md) - BentoML, Airflow Retraining & Canary Rollout
+- 📄 [reports/module-4.md](reports/module-4.md) - ONNX Quantization & Benchmark Harness
+- 📄 [reports/module-5.md](reports/module-5.md) - Prometheus, Grafana & Evidently Data Drift Detection
