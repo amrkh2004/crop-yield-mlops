@@ -1,4 +1,4 @@
-# 🚕 Ride Duration Prediction MLOps Pipeline & Model Serving
+# 🌾 Crop Yield Prediction MLOps Pipeline & Model Serving
 
 [![Python Package](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![MLflow](https://img.shields.io/badge/MLflow-Registry-0194E2.svg)](https://mlflow.org/)
@@ -7,11 +7,11 @@
 [![Locust](https://img.shields.io/badge/Locust-Load%20Test-00C853.svg)](https://locust.io/)
 [![Docker](https://img.shields.io/badge/Docker-Canary-2496ED.svg)](https://www.docker.com/)
 
-An enterprise-ready MLOps pipeline for **Ride Duration Prediction**, implementing 3 distinct model inference patterns (Batch Scoring, Web Service, Event-Driven Streaming) driven by a central **MLflow Model Registry**, automated Airflow retraining, Locust load testing, and Nginx Canary rollouts.
+An enterprise-ready MLOps pipeline for **Crop Yield Prediction**, implementing 3 distinct model inference patterns (Batch Scoring, Web Service, Event-Driven Streaming) driven by a central **MLflow Model Registry**, automated Airflow retraining, Locust load testing, Nginx Canary rollouts, and ONNX INT8 Quantization.
 
 ---
 
-## 🏗️ Deliverable 08: Unified System Architecture Diagram
+## 🏗️ Unified System Architecture Diagram
 
 ```mermaid
 graph TD
@@ -46,6 +46,21 @@ graph TD
         EXP -->|If MAE <= 1.5| PROM[Promote Model to MLflow Production]
         PROM --> M
     end
+```
+
+---
+
+## ⚡ Module 4: Model Optimization Journey Table
+
+| Model Variant | Format | Disk Size (KB) | p95 Latency (ms) | Throughput (Req/Sec) | Peak RAM (MB) | Accuracy (Mean Yield) | Speedup vs Baseline |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Baseline Model** | Pickle (`.pkl`) | **633.02 KB** | 19.785 ms | 56.4 req/sec | 1.88 MB | 30,151.37 | 1.0x (Reference) |
+| **ONNX FP32** | ONNX (`.onnx`) | 1,406.66 KB | **5.653 ms** | **226.7 req/sec** | **0.07 MB** | 30,404.39 | **3.5x Speedup** ⚡ |
+| **ONNX INT8 Quantized** | ONNX (`.onnx`) | 1,407.10 KB | 6.287 ms | 221.4 req/sec | **0.07 MB** | 30,404.39 | **3.1x Speedup** ⚡ |
+
+Run benchmark harness:
+```bash
+python src/benchmark_optimization.py
 ```
 
 ---

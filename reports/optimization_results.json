@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-09-30 21:32:01",
+  "benchmark_runs": 300,
+  "variants": [
+    {
+      "variant": "Baseline Model",
+      "format": "Pickle (.pkl)",
+      "file_size_kb": 633.02,
+      "peak_ram_mb": 1.884,
+      "mean_latency_ms": 17.744,
+      "p50_latency_ms": 17.243,
+      "p95_latency_ms": 19.785,
+      "p99_latency_ms": 24.69,
+      "throughput_req_sec": 56.35,
+      "avg_prediction_hg_ha": 30151.37
+    },
+    {
+      "variant": "ONNX FP32",
+      "format": "ONNX FP32",
+      "file_size_kb": 1406.66,
+      "peak_ram_mb": 0.069,
+      "mean_latency_ms": 4.408,
+      "p50_latency_ms": 4.299,
+      "p95_latency_ms": 5.653,
+      "p99_latency_ms": 7.741,
+      "throughput_req_sec": 226.71,
+      "avg_prediction_hg_ha": 30404.39
+    },
+    {
+      "variant": "ONNX INT8 Quantized",
+      "format": "ONNX INT8",
+      "file_size_kb": 1407.1,
+      "peak_ram_mb": 0.074,
+      "mean_latency_ms": 4.513,
+      "p50_latency_ms": 4.286,
+      "p95_latency_ms": 6.287,
+      "p99_latency_ms": 8.483,
+      "throughput_req_sec": 221.41,
+      "avg_prediction_hg_ha": 30404.39
+    }
+  ]
+}
