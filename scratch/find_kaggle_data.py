@@ -1,6 +1,7 @@
+import glob
 import json
 import os
-import glob
+
 
 def check_notebook(path):
     print(f"Checking notebook: {path}")
@@ -15,5 +16,8 @@ def check_notebook(path):
     except Exception as e:
         print(f"Error reading {path}: {e}")
 
-for nb_path in glob.glob("E:/Downloads/*.ipynb") + glob.glob("E:/Downloads/*/*.ipynb") + glob.glob("E:/Downloads/*/*/*.ipynb"):
+
+for nb_path in (
+    glob.glob("E:/Downloads/*.ipynb") + glob.glob("E:/Downloads/*/*.ipynb") + glob.glob("E:/Downloads/*/*/*.ipynb")
+):
     check_notebook(nb_path)

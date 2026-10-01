@@ -1,5 +1,6 @@
 import os
 import shutil
+
 import kagglehub
 
 print("Downloading real Kaggle Crop Yield dataset via kagglehub...")
@@ -22,6 +23,7 @@ if csv_file and os.path.exists(csv_file):
     print(f"Successfully copied real dataset {csv_file} to {target_path}!")
 
     import pandas as pd
+
     df = pd.read_csv(target_path)
     print(f"Real Dataset Shape: {df.shape}")
     print(f"Real Dataset Columns: {list(df.columns)}")

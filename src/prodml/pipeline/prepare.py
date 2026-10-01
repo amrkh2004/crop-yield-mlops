@@ -34,10 +34,10 @@ def run_prepare(
     if "Area_Item" not in df.columns:
         df["Area_Item"] = df["Area"] + "_" + df["Item"]
 
-    # Stratified or ratio split
-    split_idx = int(len(df) * 0.8)
-    train_df = df.iloc[:split_idx]
-    test_df = df.iloc[split_idx:]
+    # Random train/test split with shuffle=True to prevent alphabetical country segregation
+    from sklearn.model_selection import train_test_split
+
+    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42, shuffle=True)
 
     train_path = os.path.join(output_dir, "train.csv")
     test_path = os.path.join(output_dir, "test.csv")

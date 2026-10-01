@@ -77,3 +77,22 @@ Automated pipeline executes on push and pull requests to `main`:
 2. **Black Formatting Check**: `black --check .`
 3. **Pytest & Coverage Gate**: Enforces `--cov-fail-under=70` coverage threshold.
 4. **Docker Build & Push**: Automatically builds and pushes `amrkh2004/crop-yield-mlops:latest` to Docker Hub upon successful quality gate pass.
+
+---
+
+## 6. Data Splitting Leakage & Out-of-Distribution Analysis
+
+During pipeline optimization, two distinct data splitting strategies were evaluated on the Kaggle Crop Yield dataset (`data/raw/crop_yield_raw.csv`):
+
+### A. Sequential Country Split (Unshuffled `df.iloc[:split_idx]`)
+* **Behavior**: The raw Kaggle dataset is sorted alphabetically by country (`Area`). Splitting sequentially without shuffling places countries starting with P through Z (e.g., *Pakistan, Poland, Qatar, Saudi Arabia, Senegal, Zimbabwe*) exclusively in the test set.
+* **Impact**: Categorical feature encoders (`TargetEncoder` and `OneHotEncoder`) encounter unseen countries in the test set, falling back to global mean yields.
+* **Metrics**: $R^2 = -0.0957$, $\text{MAE} = 51,167.41 \text{ hg/ha} \; (5.11 \text{ t/ha})$.
+* **Insight**: Highlights out-of-distribution (OOD) generalization performance on entirely unobserved geographic regions.
+
+### B. Shuffled Random Split (`train_test_split(df, test_size=0.2, random_state=42, shuffle=True)`)
+* **Behavior**: Samples across all countries and years are randomly assigned between training (80%) and test (20%) sets.
+* **DVC Baseline Metrics**: $R^2 = 0.9651$, $\text{MAE} = 7,902.35 \text{ hg/ha} \; (0.79 \text{ t/ha})$.
+* **Best Registered Architecture (Extra Trees)**: $R^2 = 0.9824$, $\text{MAE} = 4,848.02 \text{ hg/ha} \; (0.48 \text{ t/ha})$.
+* **Insight**: Evaluates model interpolation capacity and yield prediction precision across temporal variations in known agricultural regions.
+

@@ -61,11 +61,11 @@ def run_mlflow_experiments(
     mlflow.set_experiment(experiment_name)
     client = MlflowClient()
 
-    # Load real Kaggle crop yield dataset
+    # Load real Kaggle crop yield dataset with shuffled random split
+    from sklearn.model_selection import train_test_split
+
     X, y = load_raw_crop_data(filepath=raw_data_path)
-    split_idx = int(len(X) * 0.8)
-    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
 
     # Define 6 candidate architectures
     experiments = [
