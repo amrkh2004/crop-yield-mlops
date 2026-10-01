@@ -71,7 +71,7 @@ graph TD
 
     subgraph "Orchestration & Retraining"
         DAG[Airflow DAG dags/retrain_pipeline.py] -->|extract >> train >> evaluate| EXP[Candidate Model MAE Gate]
-        EXP -->|If MAE <= 1.5| PROM_MODEL[Promote Model to Production]
+        EXP -->|If MAE <= 0.5 t/ha| PROM_MODEL[Promote Model to Production]
         PROM_MODEL --> M
     end
 ```

@@ -1,0 +1,20 @@
+groups:
+  - name: crop_yield_alerts
+    rules:
+      - alert: HighPredictionLatency
+        expr: rate(crop_yield_prediction_latency_seconds_sum[1m]) / rate(crop_yield_prediction_latency_seconds_count[1m]) > 0.5
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High prediction latency detected on Crop Yield API"
+          description: "Average prediction latency exceeds 500ms over 30s window."
+
+      - alert: HighErrorRate
+        expr: sum(rate(crop_yield_prediction_requests_total{status="error"}[1m])) > 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "API Error rate elevated"
+          description: "Crop Yield API prediction endpoint is throwing errors."

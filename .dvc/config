@@ -1,4 +1,4 @@
 [core]
-    remote = localstorage
-['remote "localstorage"']
-    url = .dvc/cache
+    remote = s3storage
+['remote "s3storage"']
+    url = s3://crop-yield-dvc-remote-store/dvcstore

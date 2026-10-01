@@ -14,8 +14,12 @@ models/*.pkl
 models/*.joblib
 models/*.onnx
 
-data/
-*.csv
+data/prepared/
+data/processed/
+data/scoring/
+data/events/
+data/raw/*.csv
+!data/raw/*.csv.dvc
 
 *.egg-info/
 build/

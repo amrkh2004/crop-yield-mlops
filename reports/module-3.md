@@ -14,12 +14,14 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
 ---
 
 ## 3. Locust Concurrency & Load Test Benchmark (`locustfile.py`)
-- **Conducted Load Test**: 100 concurrent users (`spawn-rate=10`) sending requests against the prediction endpoint for 2 minutes.
-- **Payload Schema**: Realistic crop yield feature requests (`area`, `item`, `year`, `average_rain_fall_mm_per_year`, `pesticides_tonnes`, `avg_temp`).
+- **Conducted Load Test**: Headless concurrency load test simulating multi-user client traffic.
+- **Report Artifacts**: Generated reports saved in [`reports/locust_summary.html`](file:///e:/Downloads/crop%20project/reports/locust_summary.html) and [`reports/locust_stats.csv`](file:///e:/Downloads/crop%20project/reports/locust_stats.csv).
 - **Measured Latency Results**:
-  - `p50 Latency`: 12.4 ms
-  - `p95 Latency`: 28.6 ms
-  - `p99 Latency`: 42.1 ms
+  - `p50 Latency`: 55 ms
+  - `p95 Latency`: 75 ms
+  - `p99 Latency`: 75 ms
+  - `Requests/sec`: 14.91 req/s
+  - `Failure Rate`: 0.00%
 - **Bottleneck Analysis**: High CPU context switching during peak micro-batch window queues. Resolved by allocating 2+ worker processes (`resources.cpu=2`).
 
 ---

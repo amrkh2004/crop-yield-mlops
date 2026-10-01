@@ -1,8 +1,12 @@
 schema: '2.0'
 stages:
   prepare:
-    cmd: .venv\Scripts\python.exe -m prodml.pipeline.prepare
+    cmd: python -m prodml.pipeline.prepare
     deps:
+    - path: data/raw/crop_yield_raw.csv
+      hash: md5
+      md5: 27c8ff7d6f31d0a1f864a3f95866d18f
+      size: 71174
     - path: src/prodml/data.py
       hash: md5
       md5: e7382161193b33d81d3fa5ab2dadb15e
@@ -21,7 +25,7 @@ stages:
       md5: eab22bc9e0d49bd368ae8874398af395
       size: 57025
   train:
-    cmd: .venv\Scripts\python.exe -m prodml.pipeline.train_stage
+    cmd: python -m prodml.pipeline.train_stage
     deps:
     - path: data/prepared/train.csv
       hash: md5
@@ -41,7 +45,7 @@ stages:
       md5: 153736e3e05c7ebf195cfec1adc94b22
       size: 628710
   evaluate:
-    cmd: .venv\Scripts\python.exe -m prodml.pipeline.evaluate
+    cmd: python -m prodml.pipeline.evaluate
     deps:
     - path: data/prepared/test.csv
       hash: md5
