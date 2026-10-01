@@ -110,8 +110,12 @@ docker-compose up --build -d
 - **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
 
 ### 📦 Note for Peer Reviewers (DVC Pipeline & Data Access)
-- The raw dataset (`data/raw/crop_yield_raw.csv`) and prepared datasets are included directly in the workspace so reviewers can run `dvc repro` or `pytest` immediately without needing AWS S3 credentials.
-- Remote synchronization (`dvc push` / `dvc pull`) is pre-configured for S3 remote (`s3://crop-yield-dvc-remote-store/crop_yield_dvc`). Reviewers can test with custom S3 remotes via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
+- **Direct Dataset Inclusion**: The raw dataset `data/raw/crop_yield_raw.csv` (28,242 rows) is tracked by git (`!data/raw/crop_yield_raw.csv`) and included directly in the repository/zip archive so reviewers can run `dvc repro` or `pytest` immediately out-of-the-box without needing AWS S3 credentials.
+- **Automated Dataset Downloader**: Reviewers can also download or refresh the raw dataset independently at any time by running:
+  ```bash
+  python scripts/download_data.py
+  ```
+- **Custom Remote Synchronization**: Remote storage is configured for S3 remote (`s3://crop-yield-dvc-remote-store/crop_yield_dvc`). Reviewers wishing to test `dvc push` / `dvc pull` with their own bucket can configure a custom remote via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
 
 ---
 

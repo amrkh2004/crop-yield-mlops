@@ -20,6 +20,7 @@ data/scoring/
 data/events/
 data/raw/*.csv
 !data/raw/*.csv.dvc
+!data/raw/crop_yield_raw.csv
 
 *.egg-info/
 build/
