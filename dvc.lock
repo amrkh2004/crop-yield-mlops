@@ -13,8 +13,8 @@ stages:
       size: 3470
     - path: src/prodml/pipeline/prepare.py
       hash: md5
-      md5: 13378ce8bdd7d60e271f98e00dd75621
-      size: 1760
+      md5: cc507ac7990b50900fdbf2f2ebc59c47
+      size: 1746
     outs:
     - path: data/prepared/test.csv
       hash: md5
