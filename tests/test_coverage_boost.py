@@ -65,7 +65,7 @@ def test_consumer_predict_and_store(tmp_path):
 @patch("redis.Redis")
 def test_run_consumer_mock(mock_redis):
     """Test consumer main loop with Redis fallback."""
-    run_consumer(redis_host="invalid_host_for_test")
+    run_consumer(redis_host="invalid_host_for_test", max_iterations=1)
 
 
 def test_event_producer_benchmark():

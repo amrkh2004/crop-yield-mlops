@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Optional
 
 import joblib
 import pandas as pd
@@ -93,11 +94,12 @@ def predict_on_event(event_id: str, payload: dict) -> dict:
 
 
 def run_consumer(
-    redis_host: str = None,
+    redis_host: Optional[str] = None,
     redis_port: int = 6379,
     stream_name: str = "crop_events",
     group_name: str = "crop_consumer_group",
     consumer_name: str = "worker_1",
+    max_iterations: Optional[int] = None,
 ):
     """
     Listens to Redis Streams and processes incoming crop yield events.
@@ -117,7 +119,9 @@ def run_consumer(
         except redis.exceptions.ResponseError:
             pass
 
-        while True:
+        iterations = 0
+        while max_iterations is None or iterations < max_iterations:
+            iterations += 1
             events = r.xreadgroup(group_name, consumer_name, {stream_name: ">"}, count=10, block=1000)
             if events:
                 for stream, message_list in events:
@@ -141,9 +145,10 @@ def run_consumer(
             "pesticides_tonnes": 91.3,
             "avg_temp": 24.5,
         }
-        for i in range(1, 101):
+        max_mock = 100 if max_iterations is None else max_iterations
+        for i in range(1, max_mock + 1):
             predict_on_event(f"mock_evt_{i:04d}", mock_payload)
-        logger.info("mock_events_processed", total=100)
+        logger.info("mock_events_processed", total=max_mock)
 
 
 if __name__ == "__main__":
