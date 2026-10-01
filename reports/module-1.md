@@ -60,6 +60,22 @@ The crop yield prediction model processes 6 environmental and agricultural featu
 | `pesticides_tonnes` | Numerical | Total pesticide usage in tonnes | `StandardScaler()` |
 | `avg_temp` | Numerical | Average annual temperature (°C) | `StandardScaler()` |
 
+### 2.1 Train/Test Splitting Evaluation & Generalization Limits
+
+The model pipeline was evaluated across four train/test splitting strategies using `scripts/evaluate_splits.py` on the real Kaggle crop yield dataset:
+
+| Splitting Strategy | Test Samples (`n_test`) | MAE (hg/ha) | MAE (t/ha) | $R^2$ Score | Generalization & Out-of-Distribution Behavior |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Random Shuffle** (DVC Pipeline) | 5,187 | **7,902 hg/ha** | **0.79 t/ha** | **0.9651** | Strong interpolation performance for known countries across years |
+| **Temporal Split** (train $\le$ 2008, test > 2008) | 5,750 | **12,844 hg/ha** | **1.28 t/ha** | **0.9323** | Solid time-series forecasting capability over future years for known countries |
+| **Ordered 80/20** (No Shuffle) | 5,187 | **51,167 hg/ha** | **5.12 t/ha** | **-0.0957** | Fails because dataset is sorted alphabetically by country, putting late-alphabet countries in test |
+| **Unseen Countries** (Group Split by `Area`) | 3,137 | **59,591 hg/ha** | **5.96 t/ha** | **-0.1399** | **Model does NOT generalize to unseen countries** |
+
+> [!IMPORTANT]
+> **Explicit Generalization Limit**:
+> **The model does NOT generalize to unseen countries ($R^2 = -0.1399$, $\text{MAE} = 5.96\text{ t/ha}$)**. 
+> High-cardinality categorical feature encoding (`Area`) relies on historical country observations. When evaluating on a country never seen during training, the model defaults to global target averages, demonstrating that the model learns country-specific baseline yields rather than a universal cross-country climate model.
+
 ---
 
 ## 3. ONNX Export & Parity Verification

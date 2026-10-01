@@ -83,19 +83,19 @@ Automated pipeline executes on push and pull requests to `main`:
 
 ---
 
-## 6. Data Splitting Leakage & Out-of-Distribution Analysis
+## 6. Comprehensive Data Splitting & Out-of-Distribution (OOD) Analysis
 
-During pipeline optimization, two distinct data splitting strategies were evaluated on the Kaggle Crop Yield dataset (`data/raw/crop_yield_raw.csv`):
+To thoroughly evaluate model generalization and prevent data leakage, four distinct train/test splitting strategies were evaluated on the real Kaggle crop yield dataset (`data/raw/crop_yield_raw.csv`) using `scripts/evaluate_splits.py`:
 
-### A. Sequential Country Split (Unshuffled `df.iloc[:split_idx]`)
-* **Behavior**: The raw Kaggle dataset is sorted alphabetically by country (`Area`). Splitting sequentially without shuffling places countries starting with P through Z (e.g., *Pakistan, Poland, Qatar, Saudi Arabia, Senegal, Zimbabwe*) exclusively in the test set.
-* **Impact**: Categorical feature encoders (`TargetEncoder` and `OneHotEncoder`) encounter unseen countries in the test set, falling back to global mean yields.
-* **Metrics**: $R^2 = -0.0957$, $\text{MAE} = 51,167.41 \text{ hg/ha} \; (5.11 \text{ t/ha})$.
-* **Insight**: Highlights out-of-distribution (OOD) generalization performance on entirely unobserved geographic regions.
+| Splitting Strategy | Test Samples (`n_test`) | MAE (hg/ha) | MAE (t/ha) | $R^2$ Score | Performance & Generalization Analysis |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Random Shuffle** (DVC Baseline) | 5,187 | **7,902 hg/ha** | **0.79 t/ha** | **0.9651** | Excellent interpolation for known countries across harvested years |
+| **Temporal Split** (train $\le$ 2008, test > 2008) | 5,750 | **12,844 hg/ha** | **1.28 t/ha** | **0.9323** | Solid time-series forecasting capability over future years for known countries |
+| **Ordered 80/20** (No Shuffle) | 5,187 | **51,167 hg/ha** | **5.12 t/ha** | **-0.0957** | Fails because dataset is sorted alphabetically by country, placing late-alphabet countries in test set |
+| **Unseen Countries** (Group Split by `Area`) | 3,137 | **59,591 hg/ha** | **5.96 t/ha** | **-0.1399** | **Model does NOT generalize to unseen countries** |
 
-### B. Shuffled Random Split (`train_test_split(df, test_size=0.2, random_state=42, shuffle=True)`)
-* **Behavior**: Samples across all countries and years are randomly assigned between training (80%) and test (20%) sets.
-* **DVC Baseline Metrics**: $R^2 = 0.9651$, $\text{MAE} = 7,902.35 \text{ hg/ha} \; (0.79 \text{ t/ha})$.
-* **Best Registered Architecture (Extra Trees)**: $R^2 = 0.9824$, $\text{MAE} = 4,848.02 \text{ hg/ha} \; (0.48 \text{ t/ha})$.
-* **Insight**: Evaluates model interpolation capacity and yield prediction precision across temporal variations in known agricultural regions.
+> [!IMPORTANT]
+> **Explicit Evaluation Rigor & Generalization Limit**:
+> **The model does NOT generalize to unseen countries ($R^2 = -0.1399$, $\text{MAE} = 59,591\text{ hg/ha} / 5.96\text{ t/ha}$)**. 
+> Because geographic `Area` is a high-cardinality categorical feature processed via Target / One-Hot Encoding, evaluating predictions on countries never observed during model training forces the pipeline to fall back to global mean crop yields. The model learns region-specific historical yields rather than universal causal relationships from weather/pesticide inputs alone. Random shuffle split ($R^2 = 0.9651$) is appropriate when serving inferences for known agricultural regions over time, whereas zero-shot prediction for new unobserved countries would require domain adaptation or macro-region embeddings.
 
