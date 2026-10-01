@@ -2,9 +2,15 @@
 Additional Unit Tests to ensure >80% test coverage across all src modules.
 """
 
+import importlib.util
+import os
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
+
+from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
+from prodml.drift_detector import DataDriftDetector
 
 try:
     from batch_score import get_production_model, run_batch_scoring
@@ -17,8 +23,7 @@ except ImportError:
     from src.event_producer import run_latency_benchmark
     from src.vllm_client import run_vllm_benchmark
 
-from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
-from prodml.drift_detector import DataDriftDetector
+HAS_OPENAI = importlib.util.find_spec("openai") is not None
 
 
 def test_generate_synthetic_crop_data():
@@ -37,6 +42,7 @@ def test_load_raw_crop_data_nonexistent(tmp_path):
     assert len(y) == 600
 
 
+@pytest.mark.skipif(not os.path.exists("data/raw/crop_yield_raw.csv"), reason="raw dataset not available locally")
 def test_load_raw_crop_data_real_kaggle():
     """Test loading real Kaggle crop yield dataset."""
     X, y = load_raw_crop_data()
@@ -90,19 +96,20 @@ def test_event_producer_benchmark():
     assert "p50_latency_ms" in results
 
 
-@patch("openai.OpenAI")
-def test_vllm_client_mock(mock_openai):
+@pytest.mark.skipif(not HAS_OPENAI, reason="openai library not installed")
+def test_vllm_client_mock():
     """Test vLLM benchmark client with mocked OpenAI API."""
-    mock_chunk = MagicMock()
-    mock_chunk.choices = [MagicMock()]
-    mock_chunk.choices[0].delta.content = "Word"
+    with patch("openai.OpenAI") as mock_openai:
+        mock_chunk = MagicMock()
+        mock_chunk.choices = [MagicMock()]
+        mock_chunk.choices[0].delta.content = "Word"
 
-    mock_client_inst = MagicMock()
-    mock_client_inst.chat.completions.create.return_value = [mock_chunk]
-    mock_openai.return_value = mock_client_inst
+        mock_client_inst = MagicMock()
+        mock_client_inst.chat.completions.create.return_value = [mock_chunk]
+        mock_openai.return_value = mock_client_inst
 
-    bench_res = run_vllm_benchmark()
-    assert "ttft_ms" in bench_res
+        bench_res = run_vllm_benchmark()
+        assert "ttft_ms" in bench_res
 
 
 def test_drift_detector_html_export(tmp_path):

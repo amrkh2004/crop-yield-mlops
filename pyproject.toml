@@ -59,7 +59,8 @@ extend-exclude = 'scratch/'
 line-length = 120
 target-version = "py39"
 src = ["src", "scripts", "tests"]
-exclude = ["notebooks", "*.ipynb", "scratch"]
+exclude = ["notebooks", "*.ipynb"]
+extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
