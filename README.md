@@ -109,6 +109,10 @@ docker-compose up --build -d
 - **Prometheus Server**: [http://localhost:9090](http://localhost:9090)
 - **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
 
+### 📦 Note for Peer Reviewers (DVC Pipeline & Data Access)
+- The raw dataset (`data/raw/crop_yield_raw.csv`) and prepared datasets are included directly in the workspace so reviewers can run `dvc repro` or `pytest` immediately without needing AWS S3 credentials.
+- Remote synchronization (`dvc push` / `dvc pull`) is pre-configured for S3 remote (`s3://crop-yield-dvc-remote-store/crop_yield_dvc`). Reviewers can test with custom S3 remotes via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
+
 ---
 
 ## 📊 Modules & Verification Documents

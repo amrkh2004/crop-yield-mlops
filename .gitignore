@@ -31,3 +31,4 @@ mlruns/
 wandb/
 .dvc/cache/
 *.zip
+scratch/

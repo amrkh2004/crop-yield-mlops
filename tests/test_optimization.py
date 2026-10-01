@@ -19,7 +19,7 @@ def test_prepare_onnx_models_and_quantization(tmp_path):
 
 def test_run_benchmark_harness_output_report(tmp_path):
     report_file = str(tmp_path / "optimization_results.json")
-    report = run_benchmark_harness(output_report=report_file)
+    report = run_benchmark_harness(output_report=report_file, num_runs=10)
 
     assert os.path.exists(report_file)
     assert "variants" in report

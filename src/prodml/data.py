@@ -53,7 +53,8 @@ def load_raw_crop_data(
     # Drop duplicates
     df = df.drop_duplicates().reset_index(drop=True)
 
-    X = df[FEATURE_NAMES]
+    X = df[FEATURE_NAMES].copy()
+    X.attrs["dataset_tag"] = "kaggle_crop_yield_real"
     y = df[TARGET_NAME]
 
     logger.info("real_data_loaded", rows=len(df), features=len(FEATURE_NAMES), target=TARGET_NAME)

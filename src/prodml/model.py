@@ -41,26 +41,55 @@ class CropYieldModel:
         self.pipeline = None
         self.ort_session = None
 
-    def load_or_create(self) -> None:
+    def load_or_create(self, model_uri: str = "models:/CropYieldModel/Production") -> None:
         """
-        Loads trained model pipeline from disk (Pickle or ONNX) if available.
-        Otherwise trains, exports, and loads both formats.
+        Loads trained model pipeline from MLflow Model Registry ('models:/CropYieldModel/Production')
+        if available, falling back to local disk (models/model.pkl & models/model.onnx) or training pipeline.
         """
-        if not os.path.exists(self.model_path) or not os.path.exists(self.onnx_path):
-            pipeline = train_model_pipeline()
-            save_artifacts(pipeline, self.model_path, self.onnx_path)
+        model_loaded = False
+        try:
+            import mlflow.pyfunc
 
-        # Load Pickle pipeline
-        if os.path.exists(self.model_path):
-            self.pipeline = joblib.load(self.model_path)
+            logger.info("attempting_mlflow_model_registry_load", uri=model_uri)
+            registry_model = mlflow.pyfunc.load_model(model_uri)
+            if hasattr(registry_model, "_model_impl") and hasattr(registry_model._model_impl, "sklearn_model"):
+                self.pipeline = registry_model._model_impl.sklearn_model
+            else:
+                self.pipeline = registry_model
+            model_loaded = True
+            logger.info("model_loaded_from_registry", uri=model_uri)
+        except Exception as e:
+            logger.info("mlflow_registry_load_fallback", notice=str(e))
 
-        # Load ONNX session if available
-        if HAS_ONNXRUNTIME and os.path.exists(self.onnx_path):
+        if not model_loaded:
+            if not os.path.exists(self.model_path) or not os.path.exists(self.onnx_path):
+                pipeline = train_model_pipeline()
+                save_artifacts(pipeline, self.model_path, self.onnx_path)
+                self.pipeline = pipeline
+            elif os.path.exists(self.model_path):
+                self.pipeline = joblib.load(self.model_path)
+
+        # ONNX session is lazy-loaded on demand when backend="onnx" is requested
+        self.ort_session = None
+
+    def _get_onnx_session(self):
+        import sys
+
+        if sys.platform == "win32":
+            return None
+        if self.ort_session is None and HAS_ONNXRUNTIME and os.path.exists(self.onnx_path):
             try:
-                self.ort_session = ort.InferenceSession(self.onnx_path, providers=["CPUExecutionProvider"])
+                opts = ort.SessionOptions()
+                opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+                opts.inter_op_num_threads = 1
+                opts.intra_op_num_threads = 1
+                self.ort_session = ort.InferenceSession(
+                    self.onnx_path, sess_options=opts, providers=["CPUExecutionProvider"]
+                )
             except Exception as e:
                 logger.warning("onnx_session_init_warning", error=str(e))
                 self.ort_session = None
+        return self.ort_session
 
     def predict(
         self, input_data: Union[Dict[str, Any], List[Dict[str, Any]]], backend: str = None
@@ -79,7 +108,8 @@ class CropYieldModel:
 
         df = pd.DataFrame(items)[self.FEATURE_NAMES]
 
-        if use_backend == "onnx" and self.ort_session is not None:
+        onnx_sess = self._get_onnx_session() if use_backend == "onnx" else None
+        if use_backend == "onnx" and onnx_sess is not None:
             raw_log_preds = self._predict_onnx(df)
             raw_preds = np.expm1(raw_log_preds)
         else:
@@ -105,13 +135,20 @@ class CropYieldModel:
         """
         Internal helper for ONNX inference. Returns predictions in log scale.
         """
-        inputs = {}
-        for col in self.FEATURE_NAMES:
-            if col in self.CATEGORICAL_FEATURES:
-                inputs[col] = np.array(df[col].astype(str).tolist(), dtype=object).reshape(-1, 1)
-            else:
-                inputs[col] = df[col].values.astype(np.float32).reshape(-1, 1)
+        sess = self._get_onnx_session()
+        if sess is None:
+            return self.pipeline.predict(df)
+        try:
+            inputs = {}
+            for col in self.FEATURE_NAMES:
+                if col in self.CATEGORICAL_FEATURES:
+                    inputs[col] = np.array(df[col].astype(str).tolist(), dtype=object).reshape(-1, 1)
+                else:
+                    inputs[col] = df[col].values.astype(np.float32).reshape(-1, 1)
 
-        output_name = self.ort_session.get_outputs()[0].name
-        onnx_outputs = self.ort_session.run([output_name], inputs)
-        return onnx_outputs[0].flatten()
+            output_name = sess.get_outputs()[0].name
+            onnx_outputs = sess.run([output_name], inputs)
+            return onnx_outputs[0].flatten()
+        except Exception as e:
+            logger.warning("onnx_predict_fallback", error=str(e))
+            return self.pipeline.predict(df)

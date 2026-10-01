@@ -107,7 +107,10 @@ def measure_variant_performance(
     }
 
 
-def run_benchmark_harness(output_report: str = "reports/optimization_results.json") -> Dict[str, Any]:
+def run_benchmark_harness(
+    output_report: str = "reports/optimization_results.json",
+    num_runs: int = 300,
+) -> Dict[str, Any]:
     """
     Executes the full benchmark harness across Baseline Pickle, ONNX FP32, and ONNX INT8 variants.
     Prints the Journey Table and exports results to JSON.
@@ -159,9 +162,13 @@ def run_benchmark_harness(output_report: str = "reports/optimization_results.jso
 
     # Benchmark all variants
     results = [
-        measure_variant_performance("Baseline Model", "models/model.pkl", "pickle", test_records, base_model),
-        measure_variant_performance("ONNX FP32", fp32_path, "onnx", test_records, base_model),
-        measure_variant_performance("ONNX INT8 Quantized", int8_path, "onnx", test_records, base_model),
+        measure_variant_performance(
+            "Baseline Model", "models/model.pkl", "pickle", test_records, base_model, num_runs=num_runs
+        ),
+        measure_variant_performance("ONNX FP32", fp32_path, "onnx", test_records, base_model, num_runs=num_runs),
+        measure_variant_performance(
+            "ONNX INT8 Quantized", int8_path, "onnx", test_records, base_model, num_runs=num_runs
+        ),
     ]
 
     os.makedirs(os.path.dirname(output_report), exist_ok=True)
