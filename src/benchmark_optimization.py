@@ -3,7 +3,6 @@ import os
 import platform
 import sys
 import time
-import tracemalloc
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
@@ -114,27 +113,22 @@ def measure_variant_performance(
     file_size_mb = round(file_size_kb / 1024.0, 4)
 
     # 1. Warm-up Phase (50 iterations excluded from timing)
-    warmup_count = min(warmup_runs, len(test_records))
+    warmup_count = warmup_runs
     for i in range(warmup_count):
         base_model.predict(test_records[i % len(test_records)], backend=backend_type)
 
-    # Start memory and CPU tracking
-    tracemalloc.start()
-    start_memory = tracemalloc.get_traced_memory()[0]
-
+    # Start memory (Peak RSS) and CPU tracking
     process = psutil.Process() if HAS_PSUTIL else None
     if process:
         process.cpu_percent(interval=None)
 
-    # 2. Timed Execution Runs (≥ 500 iterations)
+    # 2. Timed Execution Runs (guaranteed exact num_runs iterations, e.g. 500)
     latencies_ms = []
     predictions = []
 
-    eval_count = min(num_runs, len(test_records)) if len(test_records) > 0 else num_runs
-
     t_start_total = time.perf_counter()
 
-    for idx in range(eval_count):
+    for idx in range(num_runs):
         rec = test_records[idx % len(test_records)]
         t0 = time.perf_counter()
 
@@ -147,23 +141,24 @@ def measure_variant_performance(
 
     t_end_total = time.perf_counter()
 
-    current_mem, peak_mem = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-    peak_ram_mb = round(max((peak_mem - start_memory) / (1024.0 * 1024.0), 0.05), 3)
-
-    cpu_utilization = round(process.cpu_percent(interval=None), 2) if process else 0.0
+    if process:
+        peak_ram_mb = round(process.memory_info().rss / (1024.0 * 1024.0), 2)
+        cpu_utilization = round(process.cpu_percent(interval=None), 2)
+    else:
+        peak_ram_mb = 0.05
+        cpu_utilization = 0.0
 
     total_time_sec = t_end_total - t_start_total
-    throughput = round(eval_count / total_time_sec, 2) if total_time_sec > 0 else 0.0
+    throughput = round(num_runs / total_time_sec, 2) if total_time_sec > 0 else 0.0
 
     # Latency Percentiles
     p50_lat = round(float(np.percentile(latencies_ms, 50)), 3)
     p95_lat = round(float(np.percentile(latencies_ms, 95)), 3)
     p99_lat = round(float(np.percentile(latencies_ms, 99)), 3)
 
-    # Regression Accuracy Metrics against Held-out Ground Truth
-    y_eval = y_true[:eval_count]
-    preds_eval = np.array(predictions[:eval_count])
+    # Regression Accuracy Metrics against Held-out Ground Truth (cycling y_true for num_runs iterations)
+    y_eval = np.array([y_true[i % len(y_true)] for i in range(num_runs)])
+    preds_eval = np.array(predictions)
 
     mae = round(float(mean_absolute_error(y_eval, preds_eval)), 2)
     rmse = round(float(np.sqrt(mean_squared_error(y_eval, preds_eval))), 2)
@@ -177,7 +172,7 @@ def measure_variant_performance(
         "file_size_kb": file_size_kb,
         "file_size_mb": file_size_mb,
         "warmup_runs": warmup_count,
-        "timed_runs": eval_count,
+        "timed_runs": num_runs,
         "MAE_hg_ha": mae,
         "RMSE_hg_ha": rmse,
         "R2_score": r2,

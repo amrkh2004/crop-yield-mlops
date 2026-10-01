@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-01 19:01:23",
+  "timestamp": "2026-10-01 19:57:26",
   "hardware_environment": {
     "os": "Windows",
     "os_release": "10",
@@ -23,12 +23,12 @@
       "MAE_hg_ha": 20876.18,
       "RMSE_hg_ha": 38478.4,
       "R2_score": 0.8662,
-      "p50_latency_ms": 122.054,
-      "p95_latency_ms": 135.675,
-      "p99_latency_ms": 135.901,
-      "throughput_req_sec": 8.08,
-      "peak_ram_mb": 0.512,
-      "cpu_utilization_pct": 92.0,
+      "p50_latency_ms": 48.56,
+      "p95_latency_ms": 54.822,
+      "p99_latency_ms": 57.795,
+      "throughput_req_sec": 20.33,
+      "peak_ram_mb": 627.74,
+      "cpu_utilization_pct": 101.6,
       "avg_prediction_hg_ha": 74224.74
     },
     {
@@ -41,12 +41,12 @@
       "MAE_hg_ha": 20876.18,
       "RMSE_hg_ha": 38478.4,
       "R2_score": 0.8662,
-      "p50_latency_ms": 122.293,
-      "p95_latency_ms": 127.879,
-      "p99_latency_ms": 128.713,
-      "throughput_req_sec": 8.33,
-      "peak_ram_mb": 0.52,
-      "cpu_utilization_pct": 96.1,
+      "p50_latency_ms": 49.477,
+      "p95_latency_ms": 71.624,
+      "p99_latency_ms": 76.621,
+      "throughput_req_sec": 18.61,
+      "peak_ram_mb": 628.24,
+      "cpu_utilization_pct": 95.9,
       "avg_prediction_hg_ha": 74224.74
     },
     {
@@ -59,12 +59,12 @@
       "MAE_hg_ha": 20876.18,
       "RMSE_hg_ha": 38478.4,
       "R2_score": 0.8662,
-      "p50_latency_ms": 120.744,
-      "p95_latency_ms": 133.462,
-      "p99_latency_ms": 133.666,
-      "throughput_req_sec": 8.33,
-      "peak_ram_mb": 0.521,
-      "cpu_utilization_pct": 105.4,
+      "p50_latency_ms": 50.179,
+      "p95_latency_ms": 55.507,
+      "p99_latency_ms": 55.622,
+      "throughput_req_sec": 19.95,
+      "peak_ram_mb": 628.75,
+      "cpu_utilization_pct": 96.6,
       "avg_prediction_hg_ha": 74224.74
     }
   ]

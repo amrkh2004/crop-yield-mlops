@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-01 18:59:37",
+  "timestamp": "2026-10-01 19:55:15",
   "hardware_environment": {
     "os": "Windows",
     "os_release": "10",
@@ -16,19 +16,19 @@
     {
       "variant": "Baseline Model",
       "format": "Pickle (.pkl)",
-      "file_size_kb": 693.87,
-      "file_size_mb": 0.6776,
+      "file_size_kb": 52373.43,
+      "file_size_mb": 51.1459,
       "warmup_runs": 50,
       "timed_runs": 500,
       "MAE_hg_ha": 5118.86,
       "RMSE_hg_ha": 10608.82,
       "R2_score": 0.9848,
-      "p50_latency_ms": 72.044,
-      "p95_latency_ms": 85.737,
-      "p99_latency_ms": 93.248,
-      "throughput_req_sec": 13.65,
-      "peak_ram_mb": 0.814,
-      "cpu_utilization_pct": 94.6,
+      "p50_latency_ms": 37.436,
+      "p95_latency_ms": 43.288,
+      "p99_latency_ms": 46.242,
+      "throughput_req_sec": 26.87,
+      "peak_ram_mb": 353.49,
+      "cpu_utilization_pct": 82.3,
       "avg_prediction_hg_ha": 77102.37
     },
     {
@@ -41,12 +41,12 @@
       "MAE_hg_ha": 5118.86,
       "RMSE_hg_ha": 10608.82,
       "R2_score": 0.9848,
-      "p50_latency_ms": 65.646,
-      "p95_latency_ms": 68.584,
-      "p99_latency_ms": 74.66,
-      "throughput_req_sec": 15.44,
-      "peak_ram_mb": 0.581,
-      "cpu_utilization_pct": 94.1,
+      "p50_latency_ms": 37.934,
+      "p95_latency_ms": 44.586,
+      "p99_latency_ms": 46.985,
+      "throughput_req_sec": 26.37,
+      "peak_ram_mb": 353.57,
+      "cpu_utilization_pct": 82.4,
       "avg_prediction_hg_ha": 77102.37
     },
     {
@@ -59,12 +59,12 @@
       "MAE_hg_ha": 5118.86,
       "RMSE_hg_ha": 10608.82,
       "R2_score": 0.9848,
-      "p50_latency_ms": 65.581,
-      "p95_latency_ms": 68.509,
-      "p99_latency_ms": 70.247,
-      "throughput_req_sec": 15.5,
-      "peak_ram_mb": 0.735,
-      "cpu_utilization_pct": 92.6,
+      "p50_latency_ms": 37.466,
+      "p95_latency_ms": 42.757,
+      "p99_latency_ms": 46.78,
+      "throughput_req_sec": 26.94,
+      "peak_ram_mb": 353.73,
+      "cpu_utilization_pct": 79.4,
       "avg_prediction_hg_ha": 77102.37
     }
   ]
