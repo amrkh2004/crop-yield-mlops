@@ -5,13 +5,13 @@ Additional Unit Tests to ensure >80% test coverage across all src modules.
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
-from prodml.drift_detector import DataDriftDetector
-
 from src.batch_score import get_production_model, run_batch_scoring
 from src.consumer import predict_on_event, run_consumer, store_result
 from src.event_producer import run_latency_benchmark
 from src.vllm_client import run_vllm_benchmark
+
+from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
+from prodml.drift_detector import DataDriftDetector
 
 
 def test_generate_synthetic_crop_data():
@@ -92,14 +92,16 @@ def test_vllm_client_mock(mock_openai):
 
 def test_drift_detector_html_export(tmp_path):
     """Test drift detector HTML report generation and fallback."""
-    ref_df = pd.DataFrame({
-        "Year": [2010, 2011, 2012, 2013, 2014],
-        "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0],
-        "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5],
-        "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8],
-        "Area": ["Egypt"] * 5,
-        "Item": ["Maize"] * 5,
-    })
+    ref_df = pd.DataFrame(
+        {
+            "Year": [2010, 2011, 2012, 2013, 2014],
+            "average_rain_fall_mm_per_year": [100.0, 105.0, 110.0, 108.0, 112.0],
+            "pesticides_tonnes": [20.0, 22.0, 21.0, 23.0, 22.5],
+            "avg_temp": [20.0, 20.5, 21.0, 20.2, 20.8],
+            "Area": ["Egypt"] * 5,
+            "Item": ["Maize"] * 5,
+        }
+    )
 
     detector = DataDriftDetector()
     html_path = str(tmp_path / "drift.html")
