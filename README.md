@@ -116,7 +116,6 @@ docker-compose up --build -d
 ---
 
 ## 📊 Modules & Verification Documents
-- 📄 [PEER_REVIEW.md](PEER_REVIEW.md) - Peer Reviewer Rubric Verification Checklist
 - 📄 [reports/module-1.md](reports/module-1.md) - Package, FastAPI & Docker Architecture
 - 📄 [reports/module-2.md](reports/module-2.md) - MLflow, DVC & CI/CD Pipelines
 - 📄 [reports/module-3.md](reports/module-3.md) - BentoML, Airflow Retraining & Canary Rollout
