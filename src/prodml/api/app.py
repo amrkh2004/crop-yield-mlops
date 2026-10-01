@@ -3,6 +3,7 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query, Request, status
+from fastapi.concurrency import run_in_threadpool
 
 from prodml.api.middleware import LoggingAndCorrelationMiddleware
 from prodml.api.schemas import (
@@ -127,7 +128,7 @@ async def predict(
 
     try:
         model: CropYieldModel = app.state.model
-        prediction_result = model.predict(input_dict, backend=backend)
+        prediction_result = await run_in_threadpool(model.predict, input_dict, backend=backend)
         duration = time.perf_counter() - start_time
 
         # Track Prometheus Telemetry
@@ -187,7 +188,7 @@ async def predict_batch(
 
     try:
         model: CropYieldModel = app.state.model
-        batch_results = model.predict(input_dicts, backend=backend)
+        batch_results = await run_in_threadpool(model.predict, input_dicts, backend=backend)
         duration = time.perf_counter() - start_time
 
         outputs = []

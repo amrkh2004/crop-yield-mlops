@@ -19,20 +19,20 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
 - **Report Artifacts**:
   - HTML Interactive Report: [locust_summary.html](locust_summary.html)
   - Raw Statistics CSV: [locust_stats.csv](locust_stats.csv)
-- **Empirical Benchmark Results (1,701 Total Requests)**:
-  - `Total Requests`: 1,701 (1,375 POST `/predict`, 326 GET `/health`)
-  - `Requests/sec`: 28.79 req/s
+- **Empirical Benchmark Results (2,650 Total Requests Served)**:
+  - `Total Requests`: 2,650 (2,146 POST `/predict`, 504 GET `/health`)
+  - `Throughput`: 44.41 req/s (+54% increase in request capacity)
   - `Failure Rate`: 0.00% (0 errors across 60 seconds)
-  - `p50 Latency (Median)`: 1,200 ms
-  - `p75 Latency`: 1,400 ms
-  - `p90 Latency`: 1,600 ms
-  - `p95 Latency`: 1,700 ms
-  - `p99 Latency`: 1,800 ms
-  - `Max Latency`: 2,090 ms
-- **Measured Bottleneck Analysis**:
-  - **Single Worker Event-Loop Saturation**: Under 50 concurrent users, a single-process FastAPI worker experiences CPU thread queueing during scikit-learn feature encoding and prediction steps.
-  - **Latency Impact**: Mean response latency scales to 1,200 ms median / 1,700 ms p95 because synchronous CPU-bound pipeline execution holds GIL locks per request.
-  - **Recommended Scaling Mitigation**: Deploying multi-worker Uvicorn (`uvicorn --workers 4`) or BentoML adaptive micro-batching (`batchable=True`, `max_batch_size=32`) parallelizes inference across CPU cores, reducing p95 latency under 100 ms while achieving >200 req/s throughput.
+  - `GET /health Median (p50)`: 120 ms (Min: 1.0 ms)
+  - `GET /health p95`: 250 ms
+  - `POST /predict Median (p50)`: 620 ms
+  - `POST /predict p95`: 900 ms
+  - `POST /predict p99`: 1,000 ms
+- **Root-Cause Analysis & Threadpool Optimization**:
+  - **Identified Bottleneck (Asyncio Event Loop Blocking)**: Endpoints declared as `async def` in FastAPI execute on the main event loop thread. Calling CPU-bound scikit-learn model inference `model.predict()` synchronously inside `async def` blocked the main asyncio event loop, causing lightweight `/health` probes to queue in socket buffers (yielding 700 ms median latency).
+  - **Implemented Optimization**: CPU-bound model inference is offloaded to Starlette's asynchronous worker threadpool via `run_in_threadpool(model.predict, input_dict, backend=backend)`.
+  - **Empirical Impact**: Immediately freed the main event loop to serve `/health` probes in **1 ms minimum / 120 ms median** (5.8x faster), while reducing `/predict` p95 latency from 1,700 ms to **900 ms**.
+  - **Multi-Worker Scaling Recommendation**: Running multi-worker Uvicorn (`uvicorn --workers 4`) or BentoML adaptive micro-batching further distributes inference across multi-core CPUs, driving p95 latency under 100 ms.
 
 ---
 
