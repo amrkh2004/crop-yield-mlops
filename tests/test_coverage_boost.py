@@ -37,6 +37,14 @@ def test_load_raw_crop_data_nonexistent(tmp_path):
     assert len(y) == 600
 
 
+def test_load_raw_crop_data_real_kaggle():
+    """Test loading real Kaggle crop yield dataset."""
+    X, y = load_raw_crop_data()
+    assert len(X) > 20000
+    assert len(y) > 20000
+    assert getattr(X, "attrs", {}).get("dataset_tag") == "kaggle_crop_yield_real"
+
+
 def test_batch_score_end_to_end(tmp_path):
     """Test batch scoring script execution."""
     input_dir = str(tmp_path / "input")
