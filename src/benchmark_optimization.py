@@ -1,11 +1,23 @@
 import json
 import os
+import platform
+import sys
 import time
 import tracemalloc
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+try:
+    import psutil
+
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+
+from prodml.data import FEATURE_NAMES, TARGET_NAME, load_raw_crop_data
 from prodml.model import CropYieldModel
 
 
@@ -39,32 +51,90 @@ def prepare_onnx_models(base_model: CropYieldModel) -> tuple[str, str]:
     return fp32_path, int8_path
 
 
+def get_hardware_environment() -> Dict[str, Any]:
+    """
+    Collects system, hardware, and runtime environment metadata.
+    """
+    env = {
+        "os": platform.system(),
+        "os_release": platform.release(),
+        "architecture": platform.machine(),
+        "processor": platform.processor(),
+        "python_version": sys.version.split()[0],
+    }
+    if HAS_PSUTIL:
+        env["cpu_count_logical"] = psutil.cpu_count(logical=True)
+        env["cpu_count_physical"] = psutil.cpu_count(logical=False)
+        env["total_memory_gb"] = round(psutil.virtual_memory().total / (1024.0**3), 2)
+    else:
+        env["cpu_count_logical"] = os.cpu_count()
+        env["cpu_count_physical"] = os.cpu_count()
+        env["total_memory_gb"] = "N/A"
+    return env
+
+
+def load_heldout_test_set() -> Tuple[List[Dict[str, Any]], np.ndarray]:
+    """
+    Loads fixed held-out test dataset for regression evaluation and benchmark timing.
+    """
+    if os.path.exists("data/prepared/test.csv"):
+        df = pd.read_csv("data/prepared/test.csv")
+    else:
+        X, y = load_raw_crop_data()
+        df = X.copy()
+        df[TARGET_NAME] = y
+
+    if TARGET_NAME in df.columns:
+        y_true = df[TARGET_NAME].values
+        X_df = df[FEATURE_NAMES]
+    else:
+        y_true = df.iloc[:, -1].values
+        X_df = df.iloc[:, :-1]
+
+    records = X_df.to_dict(orient="records")
+    return records, y_true
+
+
 def measure_variant_performance(
     name: str,
     model_path: str,
     backend_type: str,
-    test_records: list[dict],
+    test_records: List[Dict[str, Any]],
+    y_true: np.ndarray,
     base_model: CropYieldModel,
-    num_runs: int = 300,
+    warmup_runs: int = 50,
+    num_runs: int = 500,
 ) -> Dict[str, Any]:
     """
-    Measures Latency (mean, p50, p95, p99), Throughput, Peak RAM Usage, File Size, and MAE for a model variant.
+    Measures latency (p50, p95, p99), throughput, model size, peak RAM (RSS),
+    CPU %, and regression metrics (MAE, RMSE, R²).
+    Warm-up runs (default 50) are strictly excluded from timing and latency metrics.
     """
     file_size_kb = round(os.path.getsize(model_path) / 1024.0, 2) if os.path.exists(model_path) else 0.0
+    file_size_mb = round(file_size_kb / 1024.0, 4)
 
+    # 1. Warm-up Phase (50 iterations excluded from timing)
+    warmup_count = min(warmup_runs, len(test_records))
+    for i in range(warmup_count):
+        base_model.predict(test_records[i % len(test_records)], backend=backend_type)
+
+    # Start memory and CPU tracking
     tracemalloc.start()
     start_memory = tracemalloc.get_traced_memory()[0]
 
-    # Warmup runs
-    for i in range(10):
-        base_model.predict(test_records[i % len(test_records)], backend=backend_type)
+    process = psutil.Process() if HAS_PSUTIL else None
+    if process:
+        process.cpu_percent(interval=None)
 
+    # 2. Timed Execution Runs (≥ 500 iterations)
     latencies_ms = []
     predictions = []
 
+    eval_count = min(num_runs, len(test_records)) if len(test_records) > 0 else num_runs
+
     t_start_total = time.perf_counter()
 
-    for idx in range(num_runs):
+    for idx in range(eval_count):
         rec = test_records[idx % len(test_records)]
         t0 = time.perf_counter()
 
@@ -79,17 +149,25 @@ def measure_variant_performance(
 
     current_mem, peak_mem = tracemalloc.get_traced_memory()
     tracemalloc.stop()
+    peak_ram_mb = round(max((peak_mem - start_memory) / (1024.0 * 1024.0), 0.05), 3)
 
-    peak_ram_mb = round((peak_mem - start_memory) / (1024.0 * 1024.0), 3)
+    cpu_utilization = round(process.cpu_percent(interval=None), 2) if process else 0.0
+
     total_time_sec = t_end_total - t_start_total
-    throughput = round(num_runs / total_time_sec, 2) if total_time_sec > 0 else 0.0
+    throughput = round(eval_count / total_time_sec, 2) if total_time_sec > 0 else 0.0
 
-    mean_lat = round(float(np.mean(latencies_ms)), 3)
+    # Latency Percentiles
     p50_lat = round(float(np.percentile(latencies_ms, 50)), 3)
     p95_lat = round(float(np.percentile(latencies_ms, 95)), 3)
     p99_lat = round(float(np.percentile(latencies_ms, 99)), 3)
 
-    avg_pred = round(float(np.mean(predictions)), 2)
+    # Regression Accuracy Metrics against Held-out Ground Truth
+    y_eval = y_true[:eval_count]
+    preds_eval = np.array(predictions[:eval_count])
+
+    mae = round(float(mean_absolute_error(y_eval, preds_eval)), 2)
+    rmse = round(float(np.sqrt(mean_squared_error(y_eval, preds_eval))), 2)
+    r2 = round(float(r2_score(y_eval, preds_eval)), 4)
 
     return {
         "variant": name,
@@ -97,25 +175,36 @@ def measure_variant_performance(
             "Pickle (.pkl)" if "pickle" in backend_type else ("ONNX INT8" if "int8" in name.lower() else "ONNX FP32")
         ),
         "file_size_kb": file_size_kb,
-        "peak_ram_mb": max(peak_ram_mb, 0.05),
-        "mean_latency_ms": mean_lat,
+        "file_size_mb": file_size_mb,
+        "warmup_runs": warmup_count,
+        "timed_runs": eval_count,
+        "MAE_hg_ha": mae,
+        "RMSE_hg_ha": rmse,
+        "R2_score": r2,
         "p50_latency_ms": p50_lat,
         "p95_latency_ms": p95_lat,
         "p99_latency_ms": p99_lat,
         "throughput_req_sec": throughput,
-        "avg_prediction_hg_ha": avg_pred,
+        "peak_ram_mb": peak_ram_mb,
+        "cpu_utilization_pct": cpu_utilization,
+        "avg_prediction_hg_ha": round(float(np.mean(predictions)), 2),
     }
 
 
 def run_benchmark_harness(
     output_report: str = "reports/optimization_results.json",
-    num_runs: int = 300,
+    csv_report: str = "reports/benchmark_results.csv",
+    json_report: str = "reports/benchmark_results.json",
+    warmup_runs: int = 50,
+    num_runs: int = 500,
 ) -> Dict[str, Any]:
     """
     Executes the full benchmark harness across Baseline Pickle, ONNX FP32, and ONNX INT8 variants.
-    Prints the Journey Table and exports results to JSON.
+    Includes 50 warm-up runs, ≥500 timed runs, fixed held-out dataset, regression metrics (MAE, RMSE, R²),
+    latency percentiles (p50, p95, p99), memory/CPU utilization, hardware environment logging,
+    and exports to both CSV and JSON.
     """
-    print("[Benchmark] Initializing Model Optimization & Benchmark Harness...")
+    print(f"[Benchmark] Initializing Model Optimization & Benchmark Harness (Warmup={warmup_runs}, Runs={num_runs})...")
 
     base_model = CropYieldModel(
         model_path="models/model.pkl",
@@ -124,79 +213,84 @@ def run_benchmark_harness(
     base_model.load_or_create()
 
     fp32_path, int8_path = prepare_onnx_models(base_model)
-
-    test_records = [
-        {
-            "Area": "Albania",
-            "Item": "Maize",
-            "Year": 2013,
-            "average_rain_fall_mm_per_year": 1485.0,
-            "pesticides_tonnes": 121.0,
-            "avg_temp": 16.37,
-        },
-        {
-            "Area": "Egypt",
-            "Item": "Wheat",
-            "Year": 2020,
-            "average_rain_fall_mm_per_year": 200.0,
-            "pesticides_tonnes": 45.0,
-            "avg_temp": 24.50,
-        },
-        {
-            "Area": "India",
-            "Item": "Rice, paddy",
-            "Year": 2018,
-            "average_rain_fall_mm_per_year": 1150.0,
-            "pesticides_tonnes": 320.0,
-            "avg_temp": 27.10,
-        },
-        {
-            "Area": "United States of America",
-            "Item": "Potatoes",
-            "Year": 2021,
-            "average_rain_fall_mm_per_year": 850.0,
-            "pesticides_tonnes": 410.0,
-            "avg_temp": 14.80,
-        },
-    ]
+    test_records, y_true = load_heldout_test_set()
+    hw_env = get_hardware_environment()
 
     # Benchmark all variants
     results = [
         measure_variant_performance(
-            "Baseline Model", "models/model.pkl", "pickle", test_records, base_model, num_runs=num_runs
+            "Baseline Model",
+            "models/model.pkl",
+            "pickle",
+            test_records,
+            y_true,
+            base_model,
+            warmup_runs=warmup_runs,
+            num_runs=num_runs,
         ),
-        measure_variant_performance("ONNX FP32", fp32_path, "onnx", test_records, base_model, num_runs=num_runs),
         measure_variant_performance(
-            "ONNX INT8 Quantized", int8_path, "onnx", test_records, base_model, num_runs=num_runs
+            "ONNX FP32",
+            fp32_path,
+            "onnx",
+            test_records,
+            y_true,
+            base_model,
+            warmup_runs=warmup_runs,
+            num_runs=num_runs,
+        ),
+        measure_variant_performance(
+            "ONNX INT8 Quantized",
+            int8_path,
+            "onnx",
+            test_records,
+            y_true,
+            base_model,
+            warmup_runs=warmup_runs,
+            num_runs=num_runs,
         ),
     ]
 
     os.makedirs(os.path.dirname(output_report), exist_ok=True)
+    os.makedirs(os.path.dirname(csv_report), exist_ok=True)
+
     report_data = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "benchmark_runs": 300,
+        "hardware_environment": hw_env,
+        "warmup_runs": warmup_runs,
+        "benchmark_runs": num_runs,
         "variants": results,
     }
+
+    # Export JSON Reports
     with open(output_report, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
+    with open(json_report, "w", encoding="utf-8") as f:
+        json.dump(report_data, f, indent=2)
 
-    print("\n" + "=" * 90)
-    print(" MODULE 4: MODEL OPTIMIZATION JOURNEY TABLE ")
-    print("=" * 90)
+    # Export CSV Report
+    df_results = pd.DataFrame(results)
+    df_results.to_csv(csv_report, index=False)
+    print(f"[Benchmark] Saved CSV report to {csv_report}")
+    print(f"[Benchmark] Saved JSON reports to {json_report} and {output_report}")
+
+    # Display Journey Table
+    print("\n" + "=" * 110)
+    print(" MODEL OPTIMIZATION BENCHMARK HARNESS (BASELINE & STAGES) ")
+    print("=" * 110)
     header = (
-        f"{'Model Variant':<22} | {'Format':<15} | {'Size (KB)':<10} | "
-        f"{'p95 Lat (ms)':<12} | {'Req/Sec':<10} | {'RAM (MB)':<9} | {'Mean Yield':<10}"
+        f"{'Model Variant':<20} | {'MAE':<8} | {'RMSE':<9} | {'R²':<7} | "
+        f"{'p50 (ms)':<9} | {'p95 (ms)':<9} | {'p99 (ms)':<9} | {'Req/Sec':<9} | {'RAM (MB)':<8} | {'Size (KB)':<9}"
     )
     print(header)
-    print("-" * 90)
+    print("-" * 110)
     for res in results:
         line = (
-            f"{res['variant']:<22} | {res['format']:<15} | {res['file_size_kb']:<10.2f} | "
-            f"{res['p95_latency_ms']:<12.3f} | {res['throughput_req_sec']:<10.1f} | "
-            f"{res['peak_ram_mb']:<9.2f} | {res['avg_prediction_hg_ha']:<10.2f}"
+            f"{res['variant']:<20} | {res['MAE_hg_ha']:<8.0f} | {res['RMSE_hg_ha']:<9.0f} | {res['R2_score']:<7.4f} | "
+            f"{res['p50_latency_ms']:<9.3f} | {res['p95_latency_ms']:<9.3f} | {res['p99_latency_ms']:<9.3f} | "
+            f"{res['throughput_req_sec']:<9.1f} | {res['peak_ram_mb']:<8.2f} | {res['file_size_kb']:<9.1f}"
         )
         print(line)
-    print("=" * 90 + "\n")
+    print("=" * 110 + "\n")
 
     return report_data
 
