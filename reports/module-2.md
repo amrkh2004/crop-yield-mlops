@@ -59,17 +59,17 @@ stages:
 ---
 
 ## 4. DVC Remote Storage & Evaluator Access Guide
-- **Configured S3 Remote**: `s3://crop-yield-dvc-remote-store/crop_yield_dvc`
+- **Configured S3 Remote**: `s3://crop-yield-dvc-remote-store/dvcstore`
 - **Data Pushed (`dvc push`)**: Model artifacts and DVC pipeline hashes pushed to remote storage.
-- **Evaluator / Peer Review Access (No AWS Credentials Required)**:
-  1. **Direct Workspace Access**: The raw Kaggle dataset `data/raw/crop_yield_raw.csv` is un-ignored in `.gitignore` (`!data/raw/crop_yield_raw.csv`) and included directly in the workspace/zip archive so reviewers can execute `dvc repro` and `pytest` out-of-the-box.
-  2. **Automated Dataset Downloader**: If data needs to be refreshed or downloaded independently, reviewers can run the included standalone script:
+- **Evaluator / Peer Review Access**:
+  1. **Reproducing the data:** the raw dataset is versioned with DVC only (it is not stored in Git). After `git clone`, run `dvc pull` against the configured S3 remote (`s3://crop-yield-dvc-remote-store/dvcstore`, read-only credentials provided to reviewers), then `dvc repro`. Alternatively, download the Kaggle "Crop Yield Prediction" dataset into `data/raw/crop_yield_raw.csv`; its expected md5 is recorded in `data/raw/crop_yield_raw.csv.dvc`.
+  2. **Automated Dataset Downloader**: If data needs to be verified or checked locally:
      ```bash
      python scripts/download_data.py
      ```
   3. **Custom S3 Remote Testing**: Reviewers wishing to test `dvc pull` / `dvc push` with their own AWS S3 bucket can configure a custom remote via:
      ```bash
-     dvc remote add -d my_remote s3://my-custom-bucket/dvc-store
+     dvc remote add -d my_remote s3://my-custom-bucket/dvcstore
      ```
 
 ---
