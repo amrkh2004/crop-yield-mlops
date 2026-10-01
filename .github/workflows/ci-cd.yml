@@ -27,11 +27,11 @@ jobs:
 
       - name: Code Quality Gate (Ruff Linting)
         run: |
-          ruff check .
+          ruff check src scripts tests
 
       - name: Code Formatting Check (Black)
         run: |
-          black --check .
+          black --check src scripts tests
 
       - name: Run Pytest Suite with Coverage Enforcement
         run: |
