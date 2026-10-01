@@ -5,62 +5,62 @@ stages:
     deps:
     - path: data/raw/crop_yield_raw.csv
       hash: md5
-      md5: 27c8ff7d6f31d0a1f864a3f95866d18f
-      size: 71174
+      md5: 8468a328bc667d153ec8559402335897
+      size: 1407033
     - path: src/prodml/data.py
       hash: md5
-      md5: e7382161193b33d81d3fa5ab2dadb15e
-      size: 1792
+      md5: fa9fa30c7f965da6138c7a7f374721ef
+      size: 3409
     - path: src/prodml/pipeline/prepare.py
       hash: md5
-      md5: ea0d8f2201c00acb4a2e1216914bb799
-      size: 1554
+      md5: e5d668258d1bd5b38d6cd0789e9097cb
+      size: 1641
     outs:
     - path: data/prepared/test.csv
       hash: md5
-      md5: 3bf4120a75c92a65f4781dd5beb7f2e4
-      size: 14244
+      md5: 49454e474814eaa7a1489fe1cd700fdf
+      size: 353269
     - path: data/prepared/train.csv
       hash: md5
-      md5: eab22bc9e0d49bd368ae8874398af395
-      size: 57025
+      md5: eb78a8896c68f604681f5b572c809519
+      size: 1392798
   train:
     cmd: python -m prodml.pipeline.train_stage
     deps:
     - path: data/prepared/train.csv
       hash: md5
-      md5: eab22bc9e0d49bd368ae8874398af395
-      size: 57025
+      md5: eb78a8896c68f604681f5b572c809519
+      size: 1392798
     - path: src/prodml/features.py
       hash: md5
       md5: 57a70c1118b363c5470e98c45cdda0f3
       size: 1612
     - path: src/prodml/pipeline/train_stage.py
       hash: md5
-      md5: 1d96e73d4b3467274bfb357f2bf49ef9
-      size: 1608
+      md5: 7f51ef59b5734b50850f79364dbc6fc2
+      size: 1649
     outs:
     - path: models/model.pkl
       hash: md5
-      md5: 153736e3e05c7ebf195cfec1adc94b22
-      size: 628710
+      md5: c733e8739d2f0f7b71ba9f45fe0399fb
+      size: 49590220
   evaluate:
     cmd: python -m prodml.pipeline.evaluate
     deps:
     - path: data/prepared/test.csv
       hash: md5
-      md5: 3bf4120a75c92a65f4781dd5beb7f2e4
-      size: 14244
+      md5: 49454e474814eaa7a1489fe1cd700fdf
+      size: 353269
     - path: models/model.pkl
       hash: md5
-      md5: 153736e3e05c7ebf195cfec1adc94b22
-      size: 628710
+      md5: c733e8739d2f0f7b71ba9f45fe0399fb
+      size: 49590220
     - path: src/prodml/pipeline/evaluate.py
       hash: md5
-      md5: d3378198036b8ddde39ffe51e6451366
-      size: 1702
+      md5: 364b26821fe6a28ba6bea1133357e00f
+      size: 1728
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 38b20a2736df1e63d4361fce11707508
-      size: 114
+      md5: e24bf50de47c99a82cc347e0eaf7809b
+      size: 118
