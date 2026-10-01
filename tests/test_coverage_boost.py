@@ -5,10 +5,17 @@ Additional Unit Tests to ensure >80% test coverage across all src modules.
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-from src.batch_score import get_production_model, run_batch_scoring
-from src.consumer import predict_on_event, run_consumer, store_result
-from src.event_producer import run_latency_benchmark
-from src.vllm_client import run_vllm_benchmark
+
+try:
+    from batch_score import get_production_model, run_batch_scoring
+    from consumer import predict_on_event, run_consumer, store_result
+    from event_producer import run_latency_benchmark
+    from vllm_client import run_vllm_benchmark
+except ImportError:
+    from src.batch_score import get_production_model, run_batch_scoring
+    from src.consumer import predict_on_event, run_consumer, store_result
+    from src.event_producer import run_latency_benchmark
+    from src.vllm_client import run_vllm_benchmark
 
 from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
 from prodml.drift_detector import DataDriftDetector
