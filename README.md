@@ -36,42 +36,42 @@ An enterprise-grade, end-to-end MLOps platform for **Crop Yield Prediction**, im
 
 ```mermaid
 graph TD
-    subgraph Storage & Registry
-        M[MLflow Model Registry<br>models:/CropYieldModel/Production]
-        DVC[DVC Tracked Data<br>data/raw/crop_yield.csv]
+    subgraph "Storage & Registry"
+        M["MLflow Model Registry<br>models:/CropYieldModel/Production"]
+        DVC["DVC Tracked Data<br>data/raw/crop_yield.csv"]
     end
 
     subgraph "Inference Pattern 1: FastAPI & BentoML Web Service"
-        C[HTTP Client] -->|POST /predict| API[FastAPI Web Service :8000]
-        C -->|POST /predict| NGINX[Nginx Canary Proxy :3000]
-        NGINX -->|95% Traffic| B1[BentoML Blue v1]
-        NGINX -->|5% Traffic| B2[BentoML Green v2]
-        API -->|Load Model| M
-        B1 -->|Load Model| M
+        C["HTTP Client"] -->|"POST /predict"| API["FastAPI Web Service :8000"]
+        C -->|"POST /predict"| NGINX["Nginx Canary Proxy :3000"]
+        NGINX -->|"95% Traffic"| B1["BentoML Blue v1"]
+        NGINX -->|"5% Traffic"| B2["BentoML Green v2"]
+        API -->|"Load Model"| M
+        B1 -->|"Load Model"| M
     end
 
     subgraph "Inference Pattern 2: Batch Scoring"
-        BS[Batch Scorer src/batch_score.py] -->|Read Parquet| IN[data/scoring/input/]
-        BS -->|Fetch Production Model| M
-        BS -->|Write Parquet + run_date| OUT[data/scoring/output/]
+        BS["Batch Scorer src/batch_score.py"] -->|"Read Parquet"| IN["data/scoring/input/"]
+        BS -->|"Fetch Production Model"| M
+        BS -->|"Write Parquet + run_date"| OUT["data/scoring/output/"]
     end
 
     subgraph "Inference Pattern 3: Event Streaming"
-        PROD[Event Producer 100 ev/sec] -->|Push Stream| REDIS[Redis Streams]
-        REDIS -->|XREADGROUP| CONS[Redis Consumer consumer.py]
-        CONS -->|Prediction| M
+        PROD["Event Producer 100 ev/sec"] -->|"Push Stream"| REDIS["Redis Streams"]
+        REDIS -->|"XREADGROUP"| CONS["Redis Consumer consumer.py"]
+        CONS -->|"Prediction"| M
     end
 
     subgraph "Observability & Telemetry (Module 5)"
-        API -->|Prometheus Metrics /metrics| PROM[Prometheus Server :9090]
-        PROM -->|Data Source| GRAF[Grafana Operational Dashboard :3000]
-        DRIFT[Evidently & KS Drift Detector] -->|Update Metrics| PROM
-        DRIFT -->|Generate JSON/HTML| REP[reports/drift_report.json]
+        API -->|"Prometheus Metrics /metrics"| PROM["Prometheus Server :9090"]
+        PROM -->|"Data Source"| GRAF["Grafana Operational Dashboard :3000"]
+        DRIFT["Evidently & KS Drift Detector"] -->|"Update Metrics"| PROM
+        DRIFT -->|"Generate JSON/HTML"| REP["reports/drift_report.json"]
     end
 
     subgraph "Orchestration & Retraining"
-        DAG[Airflow DAG dags/retrain_pipeline.py] -->|extract >> train >> evaluate| EXP[Candidate Model MAE Gate]
-        EXP -->|If MAE <= 1.0 t/ha (10000 hg/ha)| PROM_MODEL[Promote Model to Production]
+        DAG["Airflow DAG dags/retrain_pipeline.py"] -->|"extract >> train >> evaluate"| EXP["Candidate Model MAE Gate"]
+        EXP -->|"If MAE <= 1.0 t/ha (10000 hg/ha)"| PROM_MODEL["Promote Model to Production"]
         PROM_MODEL --> M
     end
 ```
