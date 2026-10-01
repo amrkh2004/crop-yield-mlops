@@ -1,4 +1,7 @@
 [core]
-    remote = s3storage
-['remote "s3storage"']
-    url = s3://crop-yield-dvc-remote-store/dvcstore
+    remote = minio
+['remote "minio"']
+    url = s3://dvcstore
+    endpointurl = http://localhost:9000
+    access_key_id = minioadmin
+    secret_access_key = minioadmin

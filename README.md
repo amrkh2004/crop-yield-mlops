@@ -100,7 +100,7 @@ pip install -e .
 pytest
 ```
 
-### 3. Launch Docker Stack (API + Prometheus + Grafana)
+### 3. Launch Docker Stack (API + Prometheus + Grafana + MinIO DVC Remote)
 ```bash
 docker-compose up --build -d
 ```
@@ -108,14 +108,15 @@ docker-compose up --build -d
 - **Prometheus Metrics**: [http://localhost:8000/metrics](http://localhost:8000/metrics)
 - **Prometheus Server**: [http://localhost:9090](http://localhost:9090)
 - **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
+- **MinIO S3 DVC Remote Console**: [http://localhost:9001](http://localhost:9001) (Login: `minioadmin` / `minioadmin`)
 
 ### 📦 Note for Peer Reviewers (DVC Pipeline & Data Access)
-- **Direct Dataset Inclusion**: The raw dataset `data/raw/crop_yield_raw.csv` (28,242 rows) is tracked by git (`!data/raw/crop_yield_raw.csv`) and included directly in the repository/zip archive so reviewers can run `dvc repro` or `pytest` immediately out-of-the-box without needing AWS S3 credentials.
-- **Automated Dataset Downloader**: Reviewers can also download or refresh the raw dataset independently at any time by running:
+- **Zero-Cloud S3 DVC Remote**: Running `docker-compose up -d` starts a local S3-compatible MinIO container on port 9000 with bucket `dvcstore` pre-created. Reviewers can run `dvc pull`, `dvc push`, and `dvc repro` out-of-the-box without needing an AWS account or S3 credentials.
+- **Automated Dataset Downloader**: Reviewers can also verify dataset schema independently at any time by running:
   ```bash
   python scripts/download_data.py
   ```
-- **Custom Remote Synchronization**: Remote storage is configured for S3 remote (`s3://crop-yield-dvc-remote-store/crop_yield_dvc`). Reviewers wishing to test `dvc push` / `dvc pull` with their own bucket can configure a custom remote via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
+- **AWS S3 / Custom Remote Testing**: Reviewers wishing to test `dvc push` / `dvc pull` with their own AWS S3 bucket can configure a custom remote via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
 
 ---
 
