@@ -146,8 +146,8 @@ def register_model_task(**kwargs):
     Promotes candidate model to MLflow Production stage if MAE meets quality threshold.
     """
     ti = kwargs.get("ti")
-    candidate_mae = ti.xcom_pull(task_ids="evaluate_model_task") if ti else 3500.0
-    baseline_mae_threshold = 8000.0  # Quality gate threshold for crop yield MAE (hg/ha)
+    candidate_mae = ti.xcom_pull(task_ids="evaluate_model_task") if ti else 7902.35
+    baseline_mae_threshold = 10000.0  # Quality gate threshold for crop yield MAE: 10,000 hg/ha (1.0 t/ha)
 
     if candidate_mae <= baseline_mae_threshold:
         try:

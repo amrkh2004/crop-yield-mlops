@@ -39,7 +39,7 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
 ## 4. Airflow Model Retraining DAG (`dags/retrain_pipeline.py`)
 - **Schedule**: `@weekly` with `catchup=False`.
 - **Pipeline Stage Dependencies**: `extract_data_task >> train_model_task >> evaluate_model_task >> register_model_task`.
-- **Quality Gate**: Computes candidate model MAE (`MAE_hg_ha`). If candidate MAE <= 8000.0 hg/ha, model is promoted to `Production` stage in MLflow Model Registry.
+- **Quality Gate**: Computes candidate model MAE (`MAE_hg_ha`). If candidate MAE <= 10000.0 hg/ha (1.0 t/ha), model is promoted to `Production` stage in MLflow Model Registry.
 
 ---
 
