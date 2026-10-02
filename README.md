@@ -23,17 +23,17 @@ curl -X POST http://localhost/predict \
 
 ---
 
-## 🌐 Service Endpoints & Web UIs
+## 🌐 Service Endpoints & Local Access
 
-Once the environment is running via `docker compose up -d`, the following endpoints are accessible:
+Once started via `docker compose up -d`, services are exposed locally:
 
-| Service | Endpoint / URL | Purpose | Default Credentials |
-| --- | --- | --- | --- |
-| **Prediction API** | [http://localhost:8000](http://localhost:8000/) | FastAPI Core Service & Swagger Docs (`/docs`) | N/A |
-| **Nginx Reverse Proxy** | [http://localhost](http://localhost/) | Production Entrypoint (Canary Routing & Probes) | N/A |
-| **Grafana Dashboard** | [http://localhost:3000](http://localhost:3000/) | Telemetry & Observability Visualizations | `admin` / `admin` |
-| **Prometheus Server** | [http://localhost:9090](http://localhost:9090/) | Metrics Scraping & SLA Alert Evaluation | N/A |
-| **MLflow Tracking UI** | [http://localhost:5000](http://localhost:5000/) | Experiment Tracking & Model Registry Lifecycle | N/A |
+| Service | Port / URL | Notes / Access |
+| :--- | :--- | :--- |
+| **Prediction API** | `http://localhost:8000` | Interactive docs at `/docs` |
+| **Nginx Proxy** | `http://localhost:80` | Entrypoint with Canary split |
+| **Grafana Dashboard** | `http://localhost:3000` | User: `admin` \| Pass: `admin` |
+| **Prometheus Server** | `http://localhost:9090` | Metrics target & alerts |
+| **MLflow UI** | `http://localhost:5000` | Model experiments & registry |
 
 ---
 
