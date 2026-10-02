@@ -113,7 +113,7 @@ pytest -v --cov=src/prodml --cov-report=term-missing
 * **Alerting Rules:** Configured in `monitoring/prometheus/alert_rules.yml` to trigger warnings when `crop_yield_data_drift_score > 0.25`.
 * **Dashboard Provisioning:** Auto-loaded on container startup via `monitoring/grafana/provisioning/`.
 * **Artifacts & Reports:**
-  * Locust Load Test (FastAPI): `reports/locust_fastapi.html`
-  * Locust Load Test (Optimized): `reports/locust_trt.html`
-  * MLflow Experiment Comparison: `reports/mlflow_comparison.png`
-  * Grafana Telemetry Dashboard: `reports/grafana_dashboard.png`
+* Locust Load Test (FastAPI): `reports/locust_fastapi.html`
+* Locust Load Test (Optimized): `reports/locust_trt.html`
+* MLflow Experiment Comparison: `reports/mlflow_comparison.png`
+* Grafana Telemetry Dashboard: `reports/grafana_dashboard.png`
