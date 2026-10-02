@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 5s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: "crop-yield-api"
+    static_configs:
+      - targets: ["prodml-api:8000"]

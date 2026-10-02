@@ -1,0 +1,53 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "p95 Prediction Latency (SLA Monitor)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(crop_yield_prediction_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 Latency",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Real-time Feature Data Drift Score",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "crop_yield_data_drift_score",
+          "legendFormat": "Drift Score",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Prediction Requests Rate (RPS)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(crop_yield_prediction_requests_total[1m])) by (status)",
+          "legendFormat": "Status: {{status}}",
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["mlops", "production"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Crop Yield ML Service - Production Monitoring",
+  "uid": "crop-yield-mlops-mon"
+}
