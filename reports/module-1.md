@@ -131,7 +131,7 @@ Benchmark executed across 100 single-item inference requests (`tests/test_onnx_p
 ### 3-Command Deployment Guide
 ```bash
 # 1. Clone the repository
-git clone https://github.com/amrkh2004/crop-yield-mlops.git && cd crop-yield-mlops
+git clone https://github.com/amrkhaled2004/crop-yield-mlops.git && cd crop-yield-mlops
 
 # 2. Build and launch the containerized service
 docker-compose up -d --build

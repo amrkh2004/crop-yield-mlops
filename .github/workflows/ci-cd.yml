@@ -62,7 +62,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: amrkh2004/crop-yield-mlops
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/crop-yield-mlops
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable=true

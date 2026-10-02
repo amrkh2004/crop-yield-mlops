@@ -79,7 +79,7 @@ Automated pipeline executes on push and pull requests to `main`:
 1. **Ruff Linting**: `ruff check .`
 2. **Black Formatting Check**: `black --check .`
 3. **Pytest & Coverage Gate**: Enforces `--cov-fail-under=70` coverage threshold.
-4. **Docker Build & Push**: Automatically builds and pushes `amrkh2004/crop-yield-mlops:latest` to Docker Hub upon successful quality gate pass.
+4. **Docker Build & Push**: Automatically builds and pushes `amrkhaled2004/crop-yield-mlops:latest` to Docker Hub upon successful quality gate pass.
 
 ---
 
