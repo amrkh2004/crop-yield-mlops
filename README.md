@@ -110,13 +110,21 @@ docker-compose up --build -d
 - **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`)
 - **MinIO S3 DVC Remote Console**: [http://localhost:9001](http://localhost:9001) (Login: `minioadmin` / `minioadmin`)
 
-### 📦 Note for Peer Reviewers (DVC Pipeline & Data Access)
-- **Zero-Cloud S3 DVC Remote**: Running `docker-compose up -d` starts a local S3-compatible MinIO container on port 9000 with bucket `dvcstore` pre-created. Reviewers can run `dvc pull`, `dvc push`, and `dvc repro` out-of-the-box without needing an AWS account or S3 credentials.
-- **Automated Dataset Downloader**: Reviewers can also verify dataset schema independently at any time by running:
+### 📦 Note for Peer Reviewers (DVC Pipeline & Reproducibility Guide)
+- **Zero-Cloud S3 DVC Remote Setup (MinIO)**:
+  1. **Start local stack**: `docker-compose up -d` (launches local S3-compatible MinIO container on port `9000` with console on port `9001` and pre-created bucket `dvcstore`).
+  2. **Verify/Download raw dataset**: Ensure `data/raw/crop_yield_raw.csv` is present (expected MD5 is recorded in `data/raw/crop_yield_raw.csv.dvc`).
+  3. **Seed local MinIO remote & reproduce DVC pipeline**:
+     ```bash
+     dvc push
+     dvc repro
+     ```
+  *(Note: Line endings are locked in `.gitattributes` via `data/raw/*.csv -text` to ensure cross-platform MD5 agreement).*
+- **Automated Schema Verifier**: Reviewers can verify dataset schema at any time via:
   ```bash
   python scripts/download_data.py
   ```
-- **AWS S3 / Custom Remote Testing**: Reviewers wishing to test `dvc push` / `dvc pull` with their own AWS S3 bucket can configure a custom remote via `dvc remote add -d my_remote s3://<bucket-name>/<path>`.
+- **AWS S3 Cloud Remote (Optional)**: Reviewers with AWS credentials can configure a custom S3 bucket via `dvc remote add -d s3storage s3://<bucket-name>/<path>`.
 
 ---
 
