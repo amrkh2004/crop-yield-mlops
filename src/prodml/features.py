@@ -116,4 +116,3 @@ def inverse_dl_target(z: np.ndarray, prep: dict) -> np.ndarray:
     z_arr = np.asarray(z, dtype="float64").reshape(-1)
     y_log = z_arr * prep["y_std"] + prep["y_mean"]
     return np.expm1(y_log)
-
