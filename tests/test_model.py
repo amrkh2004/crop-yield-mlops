@@ -74,8 +74,24 @@ def test_model_load_or_create_fallback_baseline(tmp_path):
     Verifies load_or_create trains baseline model when model file does not exist.
     """
     model_path = str(tmp_path / "new_models" / "model.pkl")
-    model = CropYieldModel(model_path=model_path)
-    model.load_or_create()
+    onnx_path = str(tmp_path / "new_models" / "model.onnx")
+    model = CropYieldModel(model_path=model_path, onnx_path=onnx_path)
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.predict.return_value = np.array([36613.0])
+
+    with (
+        patch("prodml.model.train_model_pipeline", return_value=mock_pipeline),
+        patch(
+            "prodml.model.save_artifacts",
+            side_effect=lambda p, m, o: (
+                os.makedirs(os.path.dirname(m), exist_ok=True),
+                open(m, "w").close(),
+                open(o, "w").close(),
+            ),
+        ),
+    ):
+        model.load_or_create(model_uri="models:/NonExistentModel/Production")
 
     assert model.pipeline is not None
     assert os.path.exists(model_path)

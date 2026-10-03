@@ -2,13 +2,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, module-1-packaging ]
+    branches: [ main, module-1-packaging, module-2-tracking-automation, module-3-deployment-serving, module-4-optimization-benchmarking, module-5-monitoring-drift ]
   pull_request:
     branches: [ main ]
 
 jobs:
   lint-and-test:
-    name: Code Linting & Unit Testing
+    name: Code Quality Gate & Automated Testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -25,17 +25,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      - name: Run Ruff Linter
+      - name: Code Quality Gate (Ruff Linting)
         run: |
-          ruff check src tests
+          ruff check src scripts tests
 
-      - name: Run Black Formatting Check
+      - name: Code Formatting Check (Black)
         run: |
-          black --check src tests
+          black --check src scripts tests
 
-      - name: Run Pytest Suite
+      - name: Run Pytest Suite with Coverage Enforcement
         run: |
-          pytest --cov=src --cov-report=term-missing
+          pytest --cov=src --cov-report=term-missing --cov-fail-under=70
 
   docker-build-push:
     name: Docker Build & Push
@@ -52,10 +52,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request' && env.DOCKER_USERNAME != ''
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -65,7 +62,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: amrkh2004/crop-yield-mlops
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/crop-yield-mlops
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable=true
@@ -75,6 +72,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME != '' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

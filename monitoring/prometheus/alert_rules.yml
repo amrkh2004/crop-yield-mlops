@@ -1,0 +1,20 @@
+groups:
+  - name: mlops_alerts
+    rules:
+      - alert: HighDataDriftDetected
+        expr: crop_yield_data_drift_score > 0.25 or crop_yield_drift_detected == 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Feature Data Drift exceeded threshold (PSI/KS > 0.25)"
+          description: "Production data distribution drifted significantly. Retraining recommended."
+
+      - alert: HighInferenceLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(crop_yield_prediction_latency_seconds_bucket[5m])) by (le)) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "p95 Latency exceeded 500ms SLA"
+          description: "Inference response time degraded. Trigger rollback or scale instances."

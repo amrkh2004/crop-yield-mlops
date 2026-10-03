@@ -1,7 +1,7 @@
 {
-  "MAE_hg_ha": 1935.35,
-  "MAE_tpha": 0.1935,
-  "RMSE": 2432.18,
-  "R2": 0.9096,
-  "n_test_samples": 120
+  "MAE_hg_ha": 7902.35,
+  "MAE_tpha": 0.7902,
+  "RMSE": 15909.88,
+  "R2": 0.9651,
+  "n_test_samples": 5187
 }
