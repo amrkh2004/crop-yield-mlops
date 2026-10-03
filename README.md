@@ -133,10 +133,10 @@ pytest -v --cov=src/prodml --cov-report=term-missing
   * `HighInferenceLatencyP95`: Fired when p95 response time exceeds 500ms SLA.
 * **Dashboard as Code:** Provisioned automatically on Grafana boot without UI manual steps.
 * **Submission Artifacts Reference:**
-  * Locust Baseline Report: `reports/locust_fastapi.html`
-  * Locust Optimized Report: `reports/locust_trt.html`
-  * MLflow Tracking Comparison: `reports/mlflow_comparison.png`
-  * Grafana Telemetry Dashboard: `reports/grafana_dashboard.png`
+  * Locust Report (FastAPI): `reports/locust_fastapi.html`
+  * Locust Report (BentoML): `reports/locust_bento.html`
+  * MLflow Tracking Comparison: _screenshot to be added (real run)_
+  * Grafana Telemetry Dashboard: _screenshot to be added (real run)_
 
 ---
 
