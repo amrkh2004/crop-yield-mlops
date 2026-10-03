@@ -1,9 +1,11 @@
 """
 MLflow Experiment Tracking and Model Registry Management for Crop Yield Service.
-Runs 5+ candidate model experiments on real Kaggle crop yield data, logs metrics/params/tags,
-registers top performing model to MLflow Registry, and promotes to 'Production' stage.
+Runs 8 candidate model & hyperparameter sweep experiments on real Kaggle crop yield data,
+logs metrics/params/tags (including git_commit and sweep tags), registers top performing model
+to MLflow Registry, and promotes to 'Production' stage.
 """
 
+import subprocess
 from typing import Any, Dict
 
 import mlflow
@@ -30,6 +32,16 @@ from prodml.train import save_artifacts
 logger = get_logger("prodml.mlflow_tracker")
 
 
+def get_git_commit() -> str:
+    """
+    Helper function to get current HEAD git commit hash.
+    """
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+    except Exception:
+        return "unknown"
+
+
 def evaluate_model(model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
     """
     Evaluates predictions and computes MAE (hg/ha), MAE (t/ha), RMSE, and R2.
@@ -52,14 +64,17 @@ def run_mlflow_experiments(
     experiment_name: str = "Crop_Yield_Prediction",
     registered_model_name: str = "CropYieldModel",
     raw_data_path: str = "data/raw/crop_yield_raw.csv",
+    pkl_path: str = "models/model.pkl",
+    onnx_path: str = "models/model.onnx",
 ) -> Dict[str, Any]:
     """
-    Runs 6 distinct ML candidate model experiments on real data,
-    logs metrics, parameters, tags, and artifacts to MLflow,
+    Runs distinct ML candidate model & hyperparameter sweep experiments on real data,
+    logs metrics, parameters, tags (including git_commit), and artifacts to MLflow,
     and promotes the top model to 'Production' stage in MLflow Model Registry.
     """
     mlflow.set_experiment(experiment_name)
     client = MlflowClient()
+    git_commit_hash = get_git_commit()
 
     # Load real Kaggle crop yield dataset with shuffled random split
     from sklearn.model_selection import train_test_split
@@ -67,7 +82,7 @@ def run_mlflow_experiments(
     X, y = load_raw_crop_data(filepath=raw_data_path)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
 
-    # Define 6 candidate architectures
+    # Define candidate architectures & hyperparameter sweep variations
     experiments = [
         {
             "name": "Ridge_Baseline",
@@ -104,6 +119,16 @@ def run_mlflow_experiments(
             "model": ExtraTreesRegressor(n_estimators=100, max_depth=15, random_state=42, n_jobs=-1),
             "params": {"model_type": "ExtraTrees", "n_estimators": 100, "max_depth": 15},
         },
+        {
+            "name": "Random_Forest_Sweep_Depth20",
+            "model": RandomForestRegressor(n_estimators=150, max_depth=20, random_state=42, n_jobs=-1),
+            "params": {"model_type": "RandomForest", "n_estimators": 150, "max_depth": 20, "sweep": True},
+        },
+        {
+            "name": "Extra_Trees_Sweep_Depth20",
+            "model": ExtraTreesRegressor(n_estimators=150, max_depth=20, random_state=42, n_jobs=-1),
+            "params": {"model_type": "ExtraTrees", "n_estimators": 150, "max_depth": 20, "sweep": True},
+        },
     ]
 
     runs_info = []
@@ -130,6 +155,7 @@ def run_mlflow_experiments(
             mlflow.set_tag("experiment_type", "crop_yield_pipeline")
             mlflow.set_tag("dataset", "kaggle_crop_yield_real")
             mlflow.set_tag("author", "mlops_team")
+            mlflow.set_tag("git_commit", git_commit_hash)
 
             mlflow.sklearn.log_model(
                 sk_model=pipeline_model,
@@ -152,6 +178,7 @@ def run_mlflow_experiments(
                 run_id=run.info.run_id,
                 mae_hg_ha=metrics["MAE_hg_ha"],
                 r2=metrics["R2"],
+                git_commit=git_commit_hash,
             )
 
     # Best model selection (highest R2 / lowest MAE)
@@ -188,7 +215,7 @@ def run_mlflow_experiments(
         logger.warning("alias_registration_notice", error=str(e))
 
     # Export best model as primary local model artifact
-    save_artifacts(best_run["model"], pkl_path="models/model.pkl", onnx_path="models/model.onnx")
+    save_artifacts(best_run["model"], pkl_path=pkl_path, onnx_path=onnx_path)
 
     return {
         "best_run_id": best_run["run_id"],

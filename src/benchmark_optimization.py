@@ -20,14 +20,15 @@ from prodml.data import FEATURE_NAMES, TARGET_NAME, load_raw_crop_data
 from prodml.model import CropYieldModel
 
 
-def prepare_onnx_models(base_model: CropYieldModel) -> tuple[str, str]:
+def prepare_onnx_models(
+    base_model: CropYieldModel,
+    fp32_path: str = "models/model.onnx",
+    int8_path: str = "models/model_int8.onnx",
+) -> tuple[str, str]:
     """
     Ensures ONNX FP32 and ONNX INT8 quantized model files exist.
     """
-    fp32_path = "models/model.onnx"
-    int8_path = "models/model_int8.onnx"
-
-    os.makedirs("models", exist_ok=True)
+    os.makedirs(os.path.dirname(fp32_path) or ".", exist_ok=True)
     if not os.path.exists(fp32_path):
         base_model.load_or_create()
 
@@ -192,6 +193,9 @@ def run_benchmark_harness(
     json_report: str = "reports/benchmark_results.json",
     warmup_runs: int = 50,
     num_runs: int = 500,
+    model_path: str = "models/model.pkl",
+    onnx_path: str = "models/model.onnx",
+    int8_path: str = "models/model_int8.onnx",
 ) -> Dict[str, Any]:
     """
     Executes the full benchmark harness across Baseline Pickle, ONNX FP32, and ONNX INT8 variants.
@@ -202,12 +206,12 @@ def run_benchmark_harness(
     print(f"[Benchmark] Initializing Model Optimization & Benchmark Harness (Warmup={warmup_runs}, Runs={num_runs})...")
 
     base_model = CropYieldModel(
-        model_path="models/model.pkl",
-        onnx_path="models/model.onnx",
+        model_path=model_path,
+        onnx_path=onnx_path,
     )
     base_model.load_or_create()
 
-    fp32_path, int8_path = prepare_onnx_models(base_model)
+    fp32_path, int8_path = prepare_onnx_models(base_model, fp32_path=onnx_path, int8_path=int8_path)
     test_records, y_true = load_heldout_test_set()
     hw_env = get_hardware_environment()
 
@@ -215,7 +219,7 @@ def run_benchmark_harness(
     results = [
         measure_variant_performance(
             "Baseline Model",
-            "models/model.pkl",
+            model_path,
             "pickle",
             test_records,
             y_true,
