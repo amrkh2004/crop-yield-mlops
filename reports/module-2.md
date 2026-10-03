@@ -59,10 +59,10 @@ stages:
 ---
 
 ## 4. DVC Remote Storage & Evaluator Access Guide
-- **Configured S3-Compatible Remote (MinIO & AWS)**: `s3://dvcstore` (`http://localhost:9000`)
-- **Data Pushed (`dvc push`)**: Model artifacts and DVC pipeline hashes versioned and synced to self-hosted S3-compatible object storage.
+- **Configured S3-Compatible Remote (Chainguard MinIO & AWS)**: `s3://dvcstore` (`http://localhost:9000`)
+- **Data Pushed (`dvc push`)**: Model artifacts and DVC pipeline hashes versioned and synced to self-hosted S3-compatible object storage via hardened Chainguard images (`cgr.dev/chainguard/minio:latest` and `cgr.dev/chainguard/minio-client:latest`).
 - **Evaluator / Peer Review Access (No AWS Card / Credentials Required)**:
-  1. **Zero-Cloud MinIO Setup & Pipeline Reproduction**: The raw dataset is versioned strictly with DVC (`data/raw/crop_yield_raw.csv.dvc`). Launch the local stack via `docker-compose up -d` (which runs MinIO S3 container on port `9000` with pre-created bucket `dvcstore`). Reviewers verify `data/raw/crop_yield_raw.csv` and run `dvc push` to seed their local MinIO store, followed by `dvc repro`.
+  1. **Zero-Cloud MinIO Setup & Pipeline Reproduction**: The raw dataset is versioned strictly with DVC (`data/raw/crop_yield_raw.csv.dvc`). Launch the local stack via `docker compose up -d` (which runs Chainguard MinIO S3 container on port `9000` with automated bucket creation for `dvcstore`). Reviewers verify `data/raw/crop_yield_raw.csv` and run `dvc push` to seed their local MinIO store, followed by `dvc repro`.
   2. **Automated Schema Verifier**: If data needs to be verified locally:
      ```bash
      python scripts/download_data.py

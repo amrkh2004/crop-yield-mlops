@@ -93,7 +93,7 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: minio_dvc_remote
     ports:
       - "9000:9000"
@@ -102,25 +102,27 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
     command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
     networks:
       - monitoring-net
     restart: unless-stopped
 
   createbuckets:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio-client:latest
     container_name: minio_create_bucket
     depends_on:
       - minio
+    environment:
+      - MC_HOST_myminio=http://minioadmin:minioadmin@minio:9000
+    entrypoint: ["/usr/bin/mc", "mb", "--ignore-existing", "myminio/dvcstore"]
     networks:
       - monitoring-net
-    entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin) do echo 'Waiting for MinIO...' && sleep 1; done;
-      /usr/bin/mc mb myminio/dvcstore --ignore-existing;
-      /usr/bin/mc anonymous set download myminio/dvcstore;
-      exit 0;
-      "
+    restart: on-failure
 
 networks:
   monitoring-net:
     driver: bridge
+
+volumes:
+  minio-data:

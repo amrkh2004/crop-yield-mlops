@@ -14,25 +14,24 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
 ---
 
 ## 3. Locust Concurrency & Load Test Benchmark (`locustfile.py`)
-- **Conducted Load Test Command**: `locust -f locustfile.py --headless -u 50 -r 10 -t 60s --host http://127.0.0.1:8000 --csv reports/locust --html reports/locust_summary.html`
-- **Duration**: 60 seconds continuous load test with 50 concurrent users and spawn rate of 10 users/sec.
+- **Conducted Load Test Command**: `locust -f locustfile.py --headless -u 50 -r 10 -t 3m --host http://localhost --csv reports/locust --html reports/locust_summary.html`
+- **Duration**: 3 minutes (180 seconds) continuous load test with 50 concurrent users at 10 users/sec spawn rate via Nginx reverse proxy on Docker Compose stack.
+- **Hardware & Stack Environment**: Intel 16-core CPU, 15.7 GB RAM executing 5 Docker Compose services (`prodml-api`, `prodml-api-canary`, `nginx`, `prometheus`, `grafana`). Traffic was dynamically distributed across `prodml-api` (90%) and `prodml-api-canary` (10%).
 - **Report Artifacts**:
   - HTML Interactive Report: [locust_summary.html](locust_summary.html)
   - Raw Statistics CSV: [locust_stats.csv](locust_stats.csv)
-- **Empirical Benchmark Results (2,650 Total Requests Served)**:
-  - `Total Requests`: 2,650 (2,146 POST `/predict`, 504 GET `/health`)
-  - `Throughput`: 44.41 req/s (+54% increase in request capacity)
-  - `Failure Rate`: 0.00% (0 errors across 60 seconds)
-  - `GET /health Median (p50)`: 120 ms (Min: 1.0 ms)
-  - `GET /health p95`: 250 ms
-  - `POST /predict Median (p50)`: 620 ms
-  - `POST /predict p95`: 900 ms
-  - `POST /predict p99`: 1,000 ms
-- **Root-Cause Analysis & Threadpool Optimization**:
-  - **Identified Bottleneck (Asyncio Event Loop Blocking)**: Endpoints declared as `async def` in FastAPI execute on the main event loop thread. Calling CPU-bound scikit-learn model inference `model.predict()` synchronously inside `async def` blocked the main asyncio event loop, causing lightweight `/health` probes to queue in socket buffers (yielding 700 ms median latency).
-  - **Implemented Optimization**: CPU-bound model inference is offloaded to Starlette's asynchronous worker threadpool via `run_in_threadpool(model.predict, input_dict, backend=backend)`.
-  - **Empirical Impact**: Immediately freed the main event loop to serve `/health` probes in **1 ms minimum / 120 ms median** (5.8x faster), while reducing `/predict` p95 latency from 1,700 ms to **900 ms**.
-  - **Multi-Worker Scaling Recommendation**: Running multi-worker Uvicorn (`uvicorn --workers 4`) or BentoML adaptive micro-batching further distributes inference across multi-core CPUs, driving p95 latency under 100 ms.
+- **Empirical Benchmark Results (14,032 Total Requests Served)**:
+  - `Total Requests`: 14,032 (11,150 POST `/predict`, 2,882 GET `/health`)
+  - `Throughput`: 78.31 req/s
+  - `Failure Rate`: 0.00% (0 errors across 180 seconds)
+  - `GET /health Median (p50)`: 5 ms (Min: 1.0 ms, p95: 28 ms)
+  - `POST /predict Median (p50)`: 73 ms
+  - `POST /predict p95`: 240 ms
+  - `POST /predict p99`: 340 ms
+- **Production Performance Takeaways**:
+  - **Canary Distribution**: Nginx reverse proxy load-balanced traffic across production and canary API instances seamlessly without dropped packets or socket starvation.
+  - **Threadpool Efficiency**: Offloading CPU-bound inference to Starlette worker threads maintained `/health` probe median latency at **5 ms** under heavy concurrency.
+  - **SLA Compliance**: Response time p95 latency remained at **240 ms**, comfortably below the 500 ms SLA threshold.
 
 ---
 
