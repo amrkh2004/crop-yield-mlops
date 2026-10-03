@@ -4,27 +4,40 @@ This report documents the performance, latency, memory footprint, and model size
 
 ---
 
-## 📊 Complete Journey Table
+## 📊 Current Benchmark Results
 
-| Model Variant | Format | Disk Size (KB) | p95 Latency (ms) | Throughput (Req/Sec) | Peak RAM (MB) | Accuracy (Mean Yield hg/ha) | Speedup vs Baseline |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Baseline Model** | Pickle (`.pkl`) | **633.02 KB** | 19.785 ms | 56.4 req/sec | 1.88 MB | 30,151.37 | 1.0x (Reference) |
-| **ONNX FP32** | ONNX (`.onnx`) | 1,406.66 KB | **5.653 ms** | **226.7 req/sec** | **0.07 MB** | 30,404.39 | **3.5x Speedup** ⚡ |
-| **ONNX INT8 Quantized** | ONNX (`.onnx`) | 1,407.10 KB | 6.287 ms | 221.4 req/sec | **0.07 MB** | 30,404.39 | **3.1x Speedup** ⚡ |
+| Model Variant | MAE | RMSE | R² | p95 Latency (ms) | Throughput (Req/Sec) | Peak RAM (MB) | Size (KB) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Baseline Model** | 5119 | 10609 | 0.9848 | 47.277 | 25.2 | 353.89 | 46269.7 |
+| **ONNX FP32** | 5119 | 10609 | 0.9848 | 48.093 | 25.4 | 353.98 | 25017.8 |
+| **ONNX INT8 Quantized** | 5119 | 10609 | 0.9848 | 44.870 | 28.2 | 354.03 | 1407.1 |
+
+---
+
+## Benchmark Configuration
+
+- Warmup iterations: 50
+- Timed benchmark iterations: 500
+- Evaluation dataset: Fixed held-out test set
+- Metrics: MAE, RMSE, R²
+- Latency: p50, p95, p99
+- Throughput: Requests/sec
+- Memory: Peak RSS
+- Hardware/environment information: recorded by the benchmark harness
 
 ---
 
 ## 💡 Trade-off Analysis & Findings
 
-1. **Inference Latency & Speedup**:
-   - Converting the Scikit-Learn tree pipeline to **ONNX Runtime (FP32)** reduced p95 latency from **19.78ms down to 5.65ms**, yielding a **3.5x acceleration**.
-   - Throughput increased dramatically from **56.4 requests/sec to 226.7 requests/sec**.
+1. **Inference Latency & Throughput**:
+   - ONNX INT8 Quantized model achieved the best latency performance at **44.870 ms (p95)** and highest throughput at **28.2 requests/sec**.
 
-2. **Memory Footprint**:
-   - Peak RAM usage dropped by **96%** (from **1.88 MB down to 0.07 MB**), allowing high-density container deployment.
+2. **Model Footprint & Compression**:
+   - INT8 Dynamic Quantization achieved drastic model size reduction down to **1,407.1 KB**, compared to **46,269.7 KB** for baseline model.
 
-3. **Accuracy Preservation**:
-   - Prediction parity between baseline and ONNX runtime variants achieved **100% agreement** with zero loss in prediction fidelity.
+3. **Fidelity & Regression Performance**:
+   - As Crop Yield Prediction is a regression task, model performance is evaluated using standard regression metrics (MAE, RMSE, R²).
+   - All variants preserve full model accuracy without degradation (MAE = 5119, RMSE = 10609, R² = 0.9848).
 
 ---
 
