@@ -30,14 +30,18 @@ This report documents the performance, latency, memory footprint, and model size
 ## 💡 Trade-off Analysis & Findings
 
 1. **Inference Latency & Throughput**:
-   - ONNX INT8 Quantized model achieved the best latency performance at **44.870 ms (p95)** and highest throughput at **28.2 requests/sec**.
+   - Single-request inference latency is comparable between the Baseline Pickle pipeline (p95 = 47.3 ms) and ONNX variants (FP32 p95 = 48.1 ms, INT8 p95 = 44.9 ms), as per-request Pandas feature preprocessing dominates Python execution overhead.
 
-2. **Model Footprint & Compression**:
-   - INT8 Dynamic Quantization achieved drastic model size reduction down to **1,407.1 KB**, compared to **46,269.7 KB** for baseline model.
+2. **Model Footprint & Storage Compression**:
+   - INT8 Dynamic Quantization provides a massive **32.8x storage reduction**, compressing model artifact size from **46,269.7 KB** down to **1,407.1 KB** (~1.4 MB).
+   - ONNX FP32 reduces baseline model disk size by ~46% down to **25,017.8 KB**.
 
-3. **Fidelity & Regression Performance**:
-   - As Crop Yield Prediction is a regression task, model performance is evaluated using standard regression metrics (MAE, RMSE, R²).
-   - All variants preserve full model accuracy without degradation (MAE = 5119, RMSE = 10609, R² = 0.9848).
+3. **Memory Footprint (Process RSS)**:
+   - Peak RAM (~354 MB) reflects overall Python process memory footprint during execution and remains consistent across variant evaluations.
+
+4. **Fidelity & Regression Performance**:
+   - As Crop Yield Prediction is a regression task, accuracy is evaluated using standard regression metrics (MAE, RMSE, R²).
+   - All variants preserve exact baseline regression performance without degradation (MAE = 5119, RMSE = 10609, R² = 0.9848).
 
 ---
 

@@ -73,10 +73,6 @@ class CropYieldModel:
         self.ort_session = None
 
     def _get_onnx_session(self):
-        import sys
-
-        if sys.platform == "win32":
-            return None
         if self.ort_session is None and HAS_ONNXRUNTIME and os.path.exists(self.onnx_path):
             try:
                 opts = ort.SessionOptions()

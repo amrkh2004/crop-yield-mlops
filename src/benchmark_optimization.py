@@ -37,7 +37,7 @@ def prepare_onnx_models(
         save_artifacts(pipeline, base_model.model_path, fp32_path)
 
     # Dynamic INT8 Quantization using onnxruntime.quantization
-    if os.path.exists(fp32_path) and not os.path.exists(int8_path):
+    if os.path.exists(fp32_path):
         try:
             from onnxruntime.quantization import QuantType, quantize_dynamic
 
@@ -219,6 +219,12 @@ def run_benchmark_harness(
     test_records, y_true = load_heldout_test_set()
     hw_env = get_hardware_environment()
 
+    int8_model = CropYieldModel(
+        model_path=model_path,
+        onnx_path=int8_path,
+    )
+    int8_model.load_or_create()
+
     # Benchmark all variants
     results = [
         measure_variant_performance(
@@ -247,7 +253,7 @@ def run_benchmark_harness(
             "onnx",
             test_records,
             y_true,
-            base_model,
+            int8_model,
             warmup_runs=warmup_runs,
             num_runs=num_runs,
         ),
