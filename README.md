@@ -1,4 +1,4 @@
-# 🌾 Crop Yield Prediction - End-to-End Production MLOps System [![CI/CD Pipeline](https://github.com/amrkhaled2004/crop-yield-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/amrkhaled2004/crop-yield-mlops/actions/workflows/ci-cd.yml)
+# 🌾 Crop Yield Prediction - End-to-End Production MLOps System [![CI/CD Pipeline](https://github.com/amrkh2004/crop-yield-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/amrkh2004/crop-yield-mlops/actions/workflows/ci-cd.yml)
 
 An enterprise-grade, production-ready MLOps platform for agricultural crop yield forecasting. The architecture implements reproducible data engineering pipelines, systematic experiment tracking, automated continuous integration with quality gates, multi-runtime inference serving, resilient canary releases with instant rollback, and full-stack observability with automated data drift alerting.
 
@@ -10,9 +10,9 @@ Any reviewer can clone, run, and query the entire production system with exactly
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/amrkhaled2004/crop-yield-mlops.git && cd crop-yield-mlops
+git clone https://github.com/amrkh2004/crop-yield-mlops.git && cd crop-yield-mlops
 
-# 2. Launch the full production stack (API, Nginx, Prometheus, Grafana)
+# 2. Launch the full production stack (API, Nginx, Prometheus, Grafana, MinIO)
 docker compose up -d
 
 # 3. Request a real-time prediction
@@ -29,11 +29,13 @@ Once started via `docker compose up -d`, services are exposed locally:
 
 | Service | Port / URL | Notes / Access |
 | :--- | :--- | :--- |
-| **Prediction API** | `http://localhost:8000` | Interactive docs at `/docs` |
-| **Nginx Proxy** | `http://localhost:80` | Entrypoint with Canary split |
+| **Prediction API** | `http://localhost:8000` | Interactive OpenAPI docs at `/docs` |
+| **Nginx Proxy** | `http://localhost:80` | Production Entrypoint with Canary traffic split |
 | **Grafana Dashboard** | `http://localhost:3000` | User: `admin` \| Pass: `admin` |
-| **Prometheus Server** | `http://localhost:9090` | Metrics target & alerts |
-| **MLflow UI** | `http://localhost:5000` | Model experiments & registry |
+| **Prometheus Server** | `http://localhost:9090` | Metrics target & data drift alerts |
+| **MinIO Console UI** | `http://localhost:9001` | User: `minioadmin` \| Pass: `minioadmin` |
+| **MinIO S3 Storage** | `http://localhost:9000` | DVC Remote storage bucket `myminio/dvcstore` |
+| **MLflow UI** | `http://localhost:5000` | Model experiments & registry (`mlflow ui`) |
 
 ---
 
@@ -41,14 +43,14 @@ Once started via `docker compose up -d`, services are exposed locally:
 
 ```text
                                   +---------------------------------------+
-                                  |            Data Layer (DVC)           |
-                                  | Kaggle Raw CSV -> Prepare -> Test/Val |
+                                  |      Data & Storage Layer (DVC)       |
+                                  | Kaggle Raw CSV -> Prepare -> MinIO S3 |
                                   +-------------------+-------------------+
                                                       |
                                                       v
                                   +---------------------------------------+
                                   |         MLflow Tracking & Reg         |
-                                  |  6 Candidate Runs -> Best: Production  |
+                                  |  8 Candidate Runs -> Best: Production  |
                                   +-------------------+-------------------+
                                                       |
                                                       v
@@ -87,18 +89,17 @@ Once started via `docker compose up -d`, services are exposed locally:
 
 ---
 
-## 📊 Model Optimization & Serving Benchmark (Journey Table)
+## 📊 Model Optimization & Serving Benchmark
 
-Evaluated on the held-out test dataset with **50 warm-up runs** and **>=500 timed iterations**:
+Evaluated on the fixed held-out test dataset with **50 warm-up runs** and **500 timed iterations**:
 
-| Model Variant | Runtime / Engine | MAE (hg/ha) | RMSE (hg/ha) | $R^2$ Score | p50 Latency (ms) | p95 Latency (ms) | p99 Latency (ms) | Throughput (req/s) | Peak RAM (MB) | Artifact Size | Hardware |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Baseline Model** | Scikit-Learn Pickle | 3,420 | 4,890 | 0.8920 | 2.450 | 4.820 | 7.150 | 385.2 | 145.2 | 820.5 KB | CPU (AMD/Intel) |
-| **ONNX FP32** | ONNX Runtime CPU | 3,420 | 4,890 | 0.8920 | 1.120 | 2.310 | 3.840 | 820.4 | 92.1 | 410.2 KB | CPU (AMD/Intel) |
-| **ONNX INT8 Quantized** | ORT Dynamic INT8 | 3,455 | 4,925 | 0.8895 | 0.840 | 1.620 | 2.450 | 1,140.6 | 78.4 | 215.8 KB | CPU (AMD/Intel) |
-| **BentoML Service** | Adaptive Micro-batching | 3,420 | 4,890 | 0.8920 | 1.850 | 3.200 | 4.910 | 950.0 | 160.0 | 820.5 KB | CPU (AMD/Intel) |
+| Model Variant | Runtime / Engine | MAE (hg/ha) | RMSE (hg/ha) | $R^2$ Score | p50 Latency (ms) | p95 Latency (ms) | p99 Latency (ms) | Throughput (req/s) | Peak RAM (MB) | Artifact Size |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Baseline Model** | Scikit-Learn Pickle | 5,119 | 10,609 | 0.9848 | 36.67 | 44.81 | 49.30 | 27.2 | 407.4 | 52,373.4 KB (~51.1 MB) |
+| **ONNX FP32** | ONNX Runtime CPU | 5,119 | 10,609 | 0.9848 | 1.16 | 2.15 | 2.77 | 728.8 | 528.5 | 28,322.3 KB (~27.6 MB) |
+| **ONNX INT8 Quantized** | ORT Dynamic INT8 | 5,119 | 10,609 | 0.9848 | 1.15 | 1.84 | 2.38 | 812.3 | 655.2 | 28,322.7 KB (~27.6 MB) |
 
-> **Key finding:** INT8 Quantization reduced model size by 73.7% and reduced p95 latency from 4.82ms to 1.62ms with an MAE regression of only ~1%, well within the allowed SLA.
+> **Key finding:** ONNX Runtime FP32 & INT8 dynamic quantization deliver high-throughput CPU acceleration (~800 req/s vs ~27 req/s baseline) while preserving 100% regression fidelity ($R^2 = 0.9848$, $\text{MAE} = 5119$).
 
 ---
 
@@ -106,7 +107,7 @@ Evaluated on the held-out test dataset with **50 warm-up runs** and **>=500 time
 
 * **Automated Test Suite:** Comprehensive pytest fixtures in `tests/` validating schemas, transforms, edge cases, and ONNX parity (`np.allclose(pred_pkl, pred_onnx, atol=1e-4)`).
 * **Coverage Gate:** Strictly enforced at $\ge 70\%$ in `pyproject.toml` (`--cov-fail-under=70`).
-* **CI Quality Gate:** GitHub Actions blocks any commit if MAE regresses by more than 5%.
+* **CI Quality Gate:** GitHub Actions blocks any commit failing tests or code coverage thresholds before container publishing.
 * **Docker Multi-Stage Build:** Non-root execution (`appuser`), slim base image, optimized layer caching.
 
 Run tests locally:
@@ -133,10 +134,9 @@ pytest -v --cov=src/prodml --cov-report=term-missing
   * `HighInferenceLatencyP95`: Fired when p95 response time exceeds 500ms SLA.
 * **Dashboard as Code:** Provisioned automatically on Grafana boot without UI manual steps.
 * **Submission Artifacts Reference:**
-  * Locust Report (FastAPI): `reports/locust_fastapi.html`
-  * Locust Report (BentoML): `reports/locust_bento.html`
-  * MLflow Tracking Comparison: _screenshot to be added (real run)_
-  * Grafana Telemetry Dashboard: _screenshot to be added (real run)_
+  * Locust Report (FastAPI): `reports/locust_stats.csv` & `reports/locust_summary.html`
+  * Benchmark Results: `reports/benchmark_results.csv` & `reports/benchmark_results.json`
+  * MLflow Experiments: `src/prodml/mlflow_tracker.py`
 
 ---
 
@@ -151,13 +151,13 @@ crop-yield-mlops/
 ├── monitoring/
 │   ├── prometheus/            # Scrape configs & alerting rules
 │   └── grafana/               # Provisioned datasources and dashboards as code
-├── reports/                   # Benchmark charts, Locust HTML, and UI screenshots
+├── reports/                   # Benchmark CSV/JSON reports, Locust HTML summaries
 ├── src/
-│   ├── prodml/                # Installable Python package (core data, train, model)
+│   ├── prodml/                # Installable Python package (core data, train, model, tracking)
 │   ├── bento_service.py       # BentoML micro-batched service runner
 │   └── benchmark_optimization.py # Automated benchmarking harness
 ├── tests/                     # Pytest suite with enforced coverage gate
-├── docker-compose.yml         # Production stack orchestration
+├── docker-compose.yml         # Production stack orchestration (API, Canary, Nginx, Prometheus, Grafana, MinIO)
 ├── Dockerfile                 # Multi-stage container definition
 ├── pyproject.toml             # Build configuration and dependencies
 └── README.md                  # System documentation and runbook
