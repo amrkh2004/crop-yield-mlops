@@ -32,3 +32,5 @@ wandb/
 .dvc/cache/
 *.zip
 scratch/
+all_code.txt
+project_structure.txt
