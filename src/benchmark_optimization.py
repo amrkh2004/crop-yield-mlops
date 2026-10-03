@@ -30,7 +30,11 @@ def prepare_onnx_models(
     """
     os.makedirs(os.path.dirname(fp32_path) or ".", exist_ok=True)
     if not os.path.exists(fp32_path):
-        base_model.load_or_create()
+        if base_model.pipeline is None:
+            base_model.load_or_create()
+        from prodml.train import save_artifacts, train_model_pipeline
+        pipeline = base_model.pipeline if base_model.pipeline is not None else train_model_pipeline()
+        save_artifacts(pipeline, base_model.model_path, fp32_path)
 
     # Dynamic INT8 Quantization using onnxruntime.quantization
     if os.path.exists(fp32_path) and not os.path.exists(int8_path):
