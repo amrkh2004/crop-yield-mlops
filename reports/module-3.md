@@ -20,18 +20,17 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
 - **Report Artifacts**:
   - HTML Interactive Report: [locust_summary.html](locust_summary.html)
   - Raw Statistics CSV: [locust_stats.csv](locust_stats.csv)
-- **Empirical Benchmark Results (14,032 Total Requests Served)**:
-  - `Total Requests`: 14,032 (11,150 POST `/predict`, 2,882 GET `/health`)
+- **Empirical Benchmark Results (14,020 Total Requests Served)**:
+  - `Total Requests`: 14,020 (11,138 POST `/predict`, 2,882 GET `/health`)
   - `Throughput`: 78.31 req/s
   - `Failure Rate`: 0.00% (0 errors across 180 seconds)
-  - `GET /health Median (p50)`: 5 ms (Min: 1.0 ms, p95: 28 ms)
-  - `POST /predict Median (p50)`: 73 ms
-  - `POST /predict p95`: 240 ms
-  - `POST /predict p99`: 340 ms
+  - `Aggregated Response Time`: Median (p50): 58 ms, p90: 190 ms, p95: 230 ms, p99: 330 ms
+  - `GET /health`: Median (p50): 5 ms, p95: 28 ms, p99: 67 ms
+  - `POST /predict`: Median (p50): 73 ms, p95: 240 ms, p99: 340 ms
 - **Production Performance Takeaways**:
   - **Canary Distribution**: Nginx reverse proxy load-balanced traffic across production and canary API instances seamlessly without dropped packets or socket starvation.
   - **Threadpool Efficiency**: Offloading CPU-bound inference to Starlette worker threads maintained `/health` probe median latency at **5 ms** under heavy concurrency.
-  - **SLA Compliance**: Response time p95 latency remained at **240 ms**, comfortably below the 500 ms SLA threshold.
+  - **SLA Compliance**: Aggregated response time p95 latency remained at **230 ms** (POST `/predict` p95 at **240 ms**), comfortably below the 500 ms SLA threshold.
 
 ---
 
