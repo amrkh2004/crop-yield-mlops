@@ -13,6 +13,7 @@ def protect_production_models(monkeypatch, tmp_path):
     Intercepts any save_artifacts calls targeting models/ and diverts them to tmp_path.
     """
     import prodml.train
+
     original_save = prodml.train.save_artifacts
 
     def safe_save_artifacts(pipeline, pkl_path="models/model.pkl", onnx_path="models/model.onnx"):

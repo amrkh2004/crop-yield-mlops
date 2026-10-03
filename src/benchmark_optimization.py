@@ -33,6 +33,7 @@ def prepare_onnx_models(
         if base_model.pipeline is None:
             base_model.load_or_create()
         from prodml.train import save_artifacts, train_model_pipeline
+
         pipeline = base_model.pipeline if base_model.pipeline is not None else train_model_pipeline()
         save_artifacts(pipeline, base_model.model_path, fp32_path)
 
