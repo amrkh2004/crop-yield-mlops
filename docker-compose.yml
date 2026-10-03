@@ -26,6 +26,28 @@ services:
       retries: 3
       start_period: 10s
 
+  prodml-api-canary:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prodml_crop_yield_api_canary
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - MODEL_PATH=/app/models/model.pkl
+      - ENV=canary
+    volumes:
+      - ./models:/app/models
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   nginx:
     image: nginx:alpine
     container_name: nginx_proxy
@@ -35,6 +57,7 @@ services:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - prodml-api
+      - prodml-api-canary
     networks:
       - monitoring-net
     restart: unless-stopped
