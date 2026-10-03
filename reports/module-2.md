@@ -6,18 +6,20 @@ Module 2 establishes experiment tracking, artifact versioning, data pipeline rep
 ---
 
 ## 2. MLflow Experiment Tracking & Model Registry (`src/prodml/mlflow_tracker.py`)
-The tracking system logs 6 candidate model architectures on real Kaggle crop yield data:
+The tracking system logs candidate model architectures and hyperparameter sweeps on real Kaggle crop yield data:
 1. `Ridge_Baseline`: `Ridge(alpha=1.0)`
 2. `Linear_Regression`: `LinearRegression()`
 3. `Decision_Tree_Depth10`: `DecisionTreeRegressor(max_depth=10)`
 4. `Random_Forest_Tuned`: `RandomForestRegressor(n_estimators=100, max_depth=15)`
 5. `Gradient_Boosting`: `GradientBoostingRegressor(n_estimators=150, learning_rate=0.05, max_depth=5)`
 6. `Extra_Trees`: `ExtraTreesRegressor(n_estimators=100, max_depth=15)`
+7. `Random_Forest_Sweep_Depth20`: `RandomForestRegressor(n_estimators=150, max_depth=20)`
+8. `Extra_Trees_Sweep_Depth20`: `ExtraTreesRegressor(n_estimators=150, max_depth=20)`
 
 ### Logged Artifacts & Metrics:
-- **Parameters**: `model_type`, `n_estimators`, `learning_rate`, `max_depth`, `alpha`.
+- **Parameters**: `model_type`, `n_estimators`, `learning_rate`, `max_depth`, `alpha`, `sweep`.
 - **Metrics**: `MAE_hg_ha`, `MAE_tpha`, `RMSE`, `R2`.
-- **Tags**: `experiment_type=crop_yield_pipeline`, `dataset=kaggle_crop_yield_real`, `author=mlops_team`.
+- **Tags**: `experiment_type=crop_yield_pipeline`, `dataset=kaggle_crop_yield_real`, `author=mlops_team`, `git_commit`.
 - **Registry Promotion**: Top candidate model (highest R² / lowest MAE) is registered in the MLflow Model Registry (`CropYieldModel`) and promoted to stage `Production` with alias `Production`.
 
 ---
@@ -62,11 +64,13 @@ stages:
 - **Configured S3-Compatible Remote (Chainguard MinIO & AWS)**: `s3://dvcstore` (`http://localhost:9000`)
 - **Data Pushed (`dvc push`)**: Model artifacts and DVC pipeline hashes versioned and synced to self-hosted S3-compatible object storage via hardened Chainguard images (`cgr.dev/chainguard/minio:latest` and `cgr.dev/chainguard/minio-client:latest`).
 - **Evaluator / Peer Review Access (No AWS Card / Credentials Required)**:
-  1. **Zero-Cloud MinIO Setup & Pipeline Reproduction**: The raw dataset is versioned strictly with DVC (`data/raw/crop_yield_raw.csv.dvc`). Launch the local stack via `docker compose up -d` (which runs Chainguard MinIO S3 container on port `9000` with automated bucket creation for `dvcstore`). Reviewers verify `data/raw/crop_yield_raw.csv` and run `dvc push` to seed their local MinIO store, followed by `dvc repro`.
-  2. **Automated Schema Verifier**: If data needs to be verified locally:
+  1. **Raw Dataset Fetch Step**: The raw dataset is tracked via DVC (`data/raw/crop_yield_raw.csv.dvc`) and git-ignored. Reviewers pull or fetch the raw dataset first before executing DVC stages:
      ```bash
+     dvc pull
+     # Or run dataset verifier / setup script:
      python scripts/download_data.py
      ```
+  2. **Zero-Cloud MinIO Setup & Pipeline Reproduction**: Launch the local stack via `docker compose up -d` (which runs Chainguard MinIO S3 container on port `9000` with automated bucket creation for `dvcstore`). Reviewers can seed their local MinIO remote via `dvc push` and reproduce the pipeline via `dvc repro`.
   3. **AWS S3 Cloud Remote Testing**: Reviewers wishing to test `dvc pull` / `dvc push` with their own AWS S3 bucket can configure a custom remote via:
      ```bash
      dvc remote add -d my_remote s3://my-custom-bucket/dvcstore
@@ -79,7 +83,7 @@ Automated pipeline executes on push and pull requests to `main`:
 1. **Ruff Linting**: `ruff check .`
 2. **Black Formatting Check**: `black --check .`
 3. **Pytest & Coverage Gate**: Enforces `--cov-fail-under=70` coverage threshold.
-4. **Docker Build & Push**: Automatically builds and pushes `amrkhaled2004/crop-yield-mlops:latest` to Docker Hub upon successful quality gate pass.
+4. **Docker Build & Push**: Automatically builds and pushes `amrkh2004/crop-yield-mlops:latest` to Docker Hub upon successful quality gate pass.
 
 ---
 
@@ -98,4 +102,3 @@ To thoroughly evaluate model generalization and prevent data leakage, four disti
 > **Explicit Evaluation Rigor & Generalization Limit**:
 > **The model does NOT generalize to unseen countries ($R^2 = -0.1399$, $\text{MAE} = 59,591\text{ hg/ha} / 5.96\text{ t/ha}$)**. 
 > Because geographic `Area` is a high-cardinality categorical feature processed via Target / One-Hot Encoding, evaluating predictions on countries never observed during model training forces the pipeline to fall back to global mean crop yields. The model learns region-specific historical yields rather than universal causal relationships from weather/pesticide inputs alone. Random shuffle split ($R^2 = 0.9651$) is appropriate when serving inferences for known agricultural regions over time, whereas zero-shot prediction for new unobserved countries would require domain adaptation or macro-region embeddings.
-
