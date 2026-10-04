@@ -22,6 +22,8 @@ The tracking system logs candidate model architectures and hyperparameter sweeps
 - **Tags**: `experiment_type=crop_yield_pipeline`, `dataset=kaggle_crop_yield_real`, `author=mlops_team`, `git_commit`.
 - **Registry Promotion**: Top candidate model (highest R² / lowest MAE) is registered in the MLflow Model Registry (`CropYieldModel`) and promoted to stage `Production` with alias `Production`.
 
+![MLflow Experiments & Registry](images/mlflow_experiments.jpg)
+
 ---
 
 ## 3. DVC Data & Pipeline Versioning (`dvc.yaml`)

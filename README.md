@@ -138,6 +138,12 @@ pytest -v --cov=src/prodml --cov-report=term-missing
   * Benchmark Results: `reports/benchmark_results.csv` & `reports/benchmark_results.json`
   * MLflow Experiments: `src/prodml/mlflow_tracker.py`
 
+### 📸 System Verification Screenshots:
+
+| MLflow Experiment Tracking & Registry | Grafana Live Production Observability |
+| :---: | :---: |
+| ![MLflow Experiments](reports/images/mlflow_experiments.jpg) | ![Grafana Dashboard](reports/images/grafana_dashboard.jpg) |
+
 ---
 
 ## 📂 Project Structure

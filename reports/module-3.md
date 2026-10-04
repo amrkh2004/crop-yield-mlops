@@ -32,6 +32,9 @@ Module 3 delivers advanced inference serving patterns, load testing benchmarks u
   - **Threadpool Efficiency**: Offloading CPU-bound inference to Starlette worker threads maintained `/health` probe median latency at **5 ms** under heavy concurrency.
   - **SLA Compliance**: Aggregated response time p95 latency remained at **230 ms** (POST `/predict` p95 at **240 ms**), comfortably below the 500 ms SLA threshold.
 
+### Real-Time Prometheus & Grafana Production Monitoring:
+![Grafana Production Monitoring](images/grafana_dashboard.jpg)
+
 ---
 
 ## 4. Airflow Model Retraining DAG (`dags/retrain_pipeline.py`)
