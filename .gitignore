@@ -34,3 +34,4 @@ wandb/
 scratch/
 all_code.txt
 project_structure.txt
+.dvc/tmp/
