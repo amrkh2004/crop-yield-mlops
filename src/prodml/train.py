@@ -7,8 +7,11 @@ from sklearn.compose import TransformedTargetRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
 
-from prodml.data import generate_synthetic_crop_data
+from prodml.data import load_raw_crop_data
 from prodml.features import build_feature_preprocessor
+from prodml.logging import get_logger
+
+logger = get_logger("prodml.train")
 
 try:
     from skl2onnx import convert_sklearn, update_registered_converter
@@ -54,11 +57,13 @@ def _register_onnx_log1p_converter():
 _register_onnx_log1p_converter()
 
 
-def train_model_pipeline(n_samples: int = 300, random_state: int = 42) -> TransformedTargetRegressor:
+def train_model_pipeline(
+    raw_data_path: str = "data/raw/crop_yield_raw.csv", random_state: int = 42
+) -> TransformedTargetRegressor:
     """
-    Trains a TransformedTargetRegressor pipeline (log1p target) on crop yield features.
+    Trains a TransformedTargetRegressor pipeline (log1p target) on real crop yield features.
     """
-    X, y = generate_synthetic_crop_data(n_samples=n_samples, random_state=random_state)
+    X, y = load_raw_crop_data(filepath=raw_data_path)
     preprocessor = build_feature_preprocessor(random_state=random_state)
 
     inner_pipeline = Pipeline(
@@ -110,7 +115,7 @@ def export_model_onnx(model: Any, output_onnx_path: str) -> bool:
             f.write(onnx_model.SerializeToString())
         return True
     except Exception as e:
-        print(f"ONNX conversion warning: {e}")
+        logger.warning("onnx_conversion_warning", error=str(e))
         return False
 
 
@@ -130,11 +135,7 @@ def save_artifacts(
 
 
 if __name__ == "__main__":
-    print("Training Crop Yield Prediction Model...")
+    logger.info("training_start", message="Training Crop Yield Prediction Model on real dataset...")
     pipe = train_model_pipeline()
     pkl_file, onnx_file = save_artifacts(pipe)
-    print(f"Pickle model saved to: {pkl_file}")
-    if onnx_file:
-        print(f"ONNX model saved to: {onnx_file}")
-    else:
-        print("ONNX model export skipped/failed.")
+    logger.info("training_complete", pkl_file=pkl_file, onnx_file=onnx_file)

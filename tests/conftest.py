@@ -1,7 +1,39 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
 from prodml.api.app import app
+
+
+@pytest.fixture(autouse=True)
+def protect_production_models(monkeypatch, tmp_path):
+    """
+    Protects production models in models/ directory from being overwritten during unit test execution.
+    Intercepts any save_artifacts calls targeting models/ and diverts them to tmp_path.
+    """
+    import prodml.train
+
+    original_save = prodml.train.save_artifacts
+
+    def safe_save_artifacts(pipeline, pkl_path="models/model.pkl", onnx_path="models/model.onnx"):
+        norm_pkl = os.path.normpath(pkl_path)
+        norm_onnx = os.path.normpath(onnx_path)
+        if norm_pkl == "models/model.pkl" or norm_pkl == "models\\model.pkl" or norm_pkl.startswith("models"):
+            pkl_path = str(tmp_path / os.path.basename(pkl_path))
+        if norm_onnx == "models/model.onnx" or norm_onnx == "models\\model.onnx" or norm_onnx.startswith("models"):
+            onnx_path = str(tmp_path / os.path.basename(onnx_path))
+        return original_save(pipeline, pkl_path, onnx_path)
+
+    monkeypatch.setattr(prodml.train, "save_artifacts", safe_save_artifacts)
+    try:
+        monkeypatch.setattr("prodml.model.save_artifacts", safe_save_artifacts)
+    except Exception:
+        pass
+    try:
+        monkeypatch.setattr("prodml.mlflow_tracker.save_artifacts", safe_save_artifacts)
+    except Exception:
+        pass
 
 
 @pytest.fixture

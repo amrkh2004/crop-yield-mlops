@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-10-03 22:22:17",
+  "hardware_environment": {
+    "os": "Windows",
+    "os_release": "10",
+    "architecture": "AMD64",
+    "processor": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+    "python_version": "3.13.12",
+    "cpu_count_logical": 16,
+    "cpu_count_physical": 8,
+    "total_memory_gb": 15.74
+  },
+  "warmup_runs": 50,
+  "benchmark_runs": 500,
+  "variants": [
+    {
+      "variant": "Baseline Model",
+      "format": "Pickle (.pkl)",
+      "file_size_kb": 52373.73,
+      "file_size_mb": 51.1462,
+      "warmup_runs": 50,
+      "timed_runs": 500,
+      "MAE_hg_ha": 5118.86,
+      "RMSE_hg_ha": 10608.82,
+      "R2_score": 0.9848,
+      "p50_latency_ms": 35.781,
+      "p95_latency_ms": 42.613,
+      "p99_latency_ms": 45.586,
+      "throughput_req_sec": 29.59,
+      "peak_ram_mb": 407.93,
+      "cpu_utilization_pct": 87.6,
+      "avg_prediction_hg_ha": 77102.37
+    },
+    {
+      "variant": "ONNX FP32",
+      "format": "ONNX FP32",
+      "file_size_kb": 28322.3,
+      "file_size_mb": 27.6585,
+      "warmup_runs": 50,
+      "timed_runs": 500,
+      "MAE_hg_ha": 13442.4,
+      "RMSE_hg_ha": 43285.08,
+      "R2_score": 0.7472,
+      "p50_latency_ms": 1.006,
+      "p95_latency_ms": 2.807,
+      "p99_latency_ms": 3.047,
+      "throughput_req_sec": 756.21,
+      "peak_ram_mb": 527.96,
+      "cpu_utilization_pct": 101.6,
+      "avg_prediction_hg_ha": 69742.25
+    },
+    {
+      "variant": "ONNX INT8 Quantized",
+      "format": "ONNX INT8",
+      "file_size_kb": 28322.74,
+      "file_size_mb": 27.6589,
+      "warmup_runs": 50,
+      "timed_runs": 500,
+      "MAE_hg_ha": 13442.4,
+      "RMSE_hg_ha": 43285.08,
+      "R2_score": 0.7472,
+      "p50_latency_ms": 1.023,
+      "p95_latency_ms": 2.267,
+      "p99_latency_ms": 2.849,
+      "throughput_req_sec": 835.23,
+      "peak_ram_mb": 647.75,
+      "cpu_utilization_pct": 99.2,
+      "avg_prediction_hg_ha": 69742.25
+    }
+  ]
+}

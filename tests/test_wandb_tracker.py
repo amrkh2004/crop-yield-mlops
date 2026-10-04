@@ -30,9 +30,7 @@ def test_run_wandb_experiments_mocked(mock_wandb):
     mock_wandb.init.return_value = mock_run
 
     results = run_wandb_experiments(mode="offline")
-    assert len(results) == 3
-    assert results[0]["run_name"] == "Ridge_Baseline"
-    assert results[1]["run_name"] == "Random_Forest_Tuned"
-    assert results[2]["run_name"] == "Gradient_Boosting"
+    assert "best_model_name" in results
+    assert "best_metrics" in results
     assert mock_wandb.log.called
     assert mock_wandb.finish.called

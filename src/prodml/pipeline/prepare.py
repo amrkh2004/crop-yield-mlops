@@ -3,7 +3,10 @@ from typing import Tuple
 
 import pandas as pd
 
-from prodml.data import TARGET_NAME, generate_synthetic_crop_data
+from prodml.data import TARGET_NAME, load_raw_crop_data
+from prodml.logging import get_logger
+
+logger = get_logger("prodml.pipeline.prepare")
 
 
 def run_prepare(
@@ -12,7 +15,7 @@ def run_prepare(
 ) -> Tuple[str, str]:
     """
     DVC Pipeline Stage 1: prepare
-    Reads/generates raw dataset, removes duplicates, adds Area_Item feature,
+    Reads raw dataset, removes duplicates, adds Area_Item feature,
     and splits into train.csv and test.csv.
     """
     os.makedirs(os.path.dirname(raw_csv_path), exist_ok=True)
@@ -21,19 +24,20 @@ def run_prepare(
     if os.path.exists(raw_csv_path):
         df = pd.read_csv(raw_csv_path)
     else:
-        X_raw, y_raw = generate_synthetic_crop_data(n_samples=600, random_state=42)
+        X_raw, y_raw = load_raw_crop_data(filepath=raw_csv_path)
         df = X_raw.copy()
         df[TARGET_NAME] = y_raw
         df.to_csv(raw_csv_path, index=False)
 
     df.columns = df.columns.str.strip()
     df = df.drop_duplicates().reset_index(drop=True)
-    df["Area_Item"] = df["Area"] + "_" + df["Item"]
+    if "Area_Item" not in df.columns:
+        df["Area_Item"] = df["Area"] + "_" + df["Item"]
 
-    # Time-based or stratified split
-    split_idx = int(len(df) * 0.8)
-    train_df = df.iloc[:split_idx]
-    test_df = df.iloc[split_idx:]
+    # Random train/test split with shuffle=True to prevent alphabetical country segregation
+    from sklearn.model_selection import train_test_split
+
+    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42, shuffle=True)
 
     train_path = os.path.join(output_dir, "train.csv")
     test_path = os.path.join(output_dir, "test.csv")
@@ -41,9 +45,13 @@ def run_prepare(
     train_df.to_csv(train_path, index=False)
     test_df.to_csv(test_path, index=False)
 
-    print(f"[DVC PREPARE] Saved train set ({len(train_df)} rows) to: {train_path}")
-    print(f"[DVC PREPARE] Saved test set ({len(test_df)} rows) to: {test_path}")
-
+    logger.info(
+        "dvc_prepare_completed",
+        train_rows=len(train_df),
+        test_rows=len(test_df),
+        train_path=train_path,
+        test_path=test_path,
+    )
     return train_path, test_path
 
 

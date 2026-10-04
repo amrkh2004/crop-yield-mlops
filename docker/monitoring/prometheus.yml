@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  - job_name: "crop-yield-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["prodml-api:8000", "localhost:8000", "host.docker.internal:8000"]

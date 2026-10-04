@@ -8,6 +8,9 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from prodml.data import FEATURE_NAMES, TARGET_NAME
+from prodml.logging import get_logger
+
+logger = get_logger("prodml.pipeline.evaluate")
 
 
 def run_evaluate(
@@ -45,11 +48,10 @@ def run_evaluate(
     }
 
     os.makedirs(os.path.dirname(output_metrics_path), exist_ok=True)
-    with open(output_metrics_path, "w") as f:
+    with open(output_metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"[DVC EVALUATE] Metrics report exported to: {output_metrics_path}")
-    print(f"[DVC EVALUATE] MAE (hg/ha): {metrics['MAE_hg_ha']} | R2: {metrics['R2']}")
+    logger.info("dvc_evaluate_completed", metrics=metrics, path=output_metrics_path)
     return metrics
 
 

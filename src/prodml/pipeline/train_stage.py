@@ -8,7 +8,10 @@ from sklearn.pipeline import Pipeline
 
 from prodml.data import FEATURE_NAMES, TARGET_NAME
 from prodml.features import build_feature_preprocessor
+from prodml.logging import get_logger
 from prodml.train import save_artifacts
+
+logger = get_logger("prodml.pipeline.train")
 
 
 def run_train(
@@ -48,7 +51,7 @@ def run_train(
     model.fit(X_train, y_train)
 
     pkl_path, onnx_path = save_artifacts(model, pkl_path=output_model_path)
-    print(f"[DVC TRAIN] Trained model successfully saved to: {pkl_path}")
+    logger.info("dvc_train_completed", model_path=pkl_path, onnx_path=onnx_path)
     return pkl_path
 
 

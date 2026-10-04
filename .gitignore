@@ -13,9 +13,14 @@ htmlcov/
 models/*.pkl
 models/*.joblib
 models/*.onnx
+models/registry/
 
-data/
-*.csv
+data/prepared/
+data/processed/
+data/scoring/
+data/events/
+data/raw/*.csv
+!data/raw/*.csv.dvc
 
 *.egg-info/
 build/
@@ -24,5 +29,12 @@ dist/
 .vscode/
 
 mlruns/
+mlflow.db
+*.db
 wandb/
 .dvc/cache/
+*.zip
+scratch/
+all_code.txt
+project_structure.txt
+.dvc/tmp/
