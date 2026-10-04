@@ -1,4 +1,3 @@
-import os
 import time
 
 import numpy as np
@@ -8,11 +7,8 @@ from prodml.model import CropYieldModel
 
 
 def get_test_model(tmp_path):
-    pkl_path = "models/model.pkl"
-    onnx_path = "models/model.onnx"
-    if not os.path.exists(pkl_path) or not os.path.exists(onnx_path):
-        pkl_path = str(tmp_path / "model.pkl")
-        onnx_path = str(tmp_path / "model.onnx")
+    pkl_path = str(tmp_path / "model.pkl")
+    onnx_path = str(tmp_path / "model.onnx")
 
     model = CropYieldModel(model_path=pkl_path, onnx_path=onnx_path)
     model.load_or_create(model_uri="")
