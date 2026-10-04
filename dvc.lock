@@ -42,8 +42,8 @@ stages:
     outs:
     - path: models/model.pkl
       hash: md5
-      md5: fa8063f3ac4709d0cbd3b0deb74a0260
-      size: 53630380
+      md5: f2138fe29780ec32d826431c6327ba1b
+      size: 710518
   evaluate:
     cmd: python -m prodml.pipeline.evaluate
     deps:
@@ -53,8 +53,8 @@ stages:
       size: 348772
     - path: models/model.pkl
       hash: md5
-      md5: fa8063f3ac4709d0cbd3b0deb74a0260
-      size: 53630380
+      md5: f2138fe29780ec32d826431c6327ba1b
+      size: 710518
     - path: src/prodml/pipeline/evaluate.py
       hash: md5
       md5: 364b26821fe6a28ba6bea1133357e00f
