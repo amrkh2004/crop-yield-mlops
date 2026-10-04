@@ -29,6 +29,8 @@ dist/
 .vscode/
 
 mlruns/
+mlflow.db
+*.db
 wandb/
 .dvc/cache/
 *.zip

@@ -35,7 +35,7 @@ Once started via `docker compose up -d`, services are exposed locally:
 | **Prometheus Server** | `http://localhost:9090` | Metrics target & data drift alerts |
 | **MinIO Console UI** | `http://localhost:9001` | User: `minioadmin` \| Pass: `minioadmin` |
 | **MinIO S3 Storage** | `http://localhost:9000` | DVC Remote storage bucket `myminio/dvcstore` |
-| **MLflow UI** | `http://localhost:5000` | Model experiments & registry (`mlflow ui`) |
+| **MLflow UI** | `http://localhost:5000` | Model experiments & registry (`python -m mlflow ui --backend-store-uri sqlite:///mlflow.db`) |
 
 ---
 
