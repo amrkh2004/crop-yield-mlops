@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from prodml.data import generate_synthetic_crop_data, load_raw_crop_data
+from prodml.data import generate_synthetic_crop_data
 from prodml.model import CropYieldModel
 
 
@@ -15,7 +15,7 @@ def get_test_model(tmp_path):
         onnx_path = str(tmp_path / "model.onnx")
 
     model = CropYieldModel(model_path=pkl_path, onnx_path=onnx_path)
-    model.load_or_create()
+    model.load_or_create(model_uri="")
     return model
 
 
@@ -30,12 +30,8 @@ def test_pickle_onnx_prediction_parity(tmp_path):
     if onnx_sess is None:
         return
 
-    try:
-        X, _ = load_raw_crop_data()
-        sample_items = X.head(50).to_dict(orient="records")
-    except Exception:
-        X, _ = generate_synthetic_crop_data(n_samples=50, random_state=123)
-        sample_items = X.to_dict(orient="records")
+    X, _ = generate_synthetic_crop_data(n_samples=50, random_state=123)
+    sample_items = X.to_dict(orient="records")
 
     pickle_res = model.predict(sample_items, backend="pickle")
     onnx_res = model.predict(sample_items, backend="onnx")
