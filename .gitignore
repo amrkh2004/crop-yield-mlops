@@ -13,6 +13,7 @@ htmlcov/
 models/*.pkl
 models/*.joblib
 models/*.onnx
+models/registry/
 
 data/prepared/
 data/processed/

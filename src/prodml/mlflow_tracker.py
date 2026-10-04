@@ -1,8 +1,7 @@
 """
 MLflow Experiment Tracking and Model Registry Management for Crop Yield Service.
-Runs 8 candidate model & hyperparameter sweep experiments on real Kaggle crop yield data,
-logs metrics/params/tags (including git_commit and sweep tags), registers top performing model
-to MLflow Registry, and promotes to 'Production' stage.
+Runs 5+ candidate model experiments on real Kaggle crop yield data, logs metrics/params/tags,
+registers top performing model to MLflow Registry, and promotes to 'Production' stage.
 """
 
 import subprocess
@@ -21,6 +20,7 @@ from sklearn.ensemble import (
 )
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import ParameterSampler
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeRegressor
 
@@ -31,15 +31,36 @@ from prodml.train import save_artifacts
 
 logger = get_logger("prodml.mlflow_tracker")
 
+# Search space for the Gradient Boosting hyperparameter sweep (random search, fixed seed).
+SWEEP_SPACE = {
+    "n_estimators": [100, 150, 200],
+    "learning_rate": [0.03, 0.05, 0.1, 0.2],
+    "max_depth": [3, 4, 5, 6],
+    "subsample": [0.7, 0.85, 1.0],
+}
 
-def get_git_commit() -> str:
-    """
-    Helper function to get current HEAD git commit hash.
-    """
+
+def _git(*args: str) -> str:
+    """Runs a git command and returns its stripped output, or 'unknown' when unavailable."""
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-    except Exception:
+        out = subprocess.run(["git", *args], capture_output=True, text=True, timeout=10, check=False)
+        value = out.stdout.strip()
+        return value if out.returncode == 0 and value else "unknown"
+    except (OSError, subprocess.SubprocessError):
         return "unknown"
+
+
+def _data_version(dvc_file: str = "data/raw/crop_yield_raw.csv.dvc") -> str:
+    """Returns the md5 recorded by DVC for the raw dataset (the dataset version), or 'unknown'."""
+    try:
+        with open(dvc_file, encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip().lstrip("- ").strip()
+                if stripped.startswith("md5:"):
+                    return stripped.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return "unknown"
 
 
 def evaluate_model(model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
@@ -64,25 +85,44 @@ def run_mlflow_experiments(
     experiment_name: str = "Crop_Yield_Prediction",
     registered_model_name: str = "CropYieldModel",
     raw_data_path: str = "data/raw/crop_yield_raw.csv",
-    pkl_path: str = "models/model.pkl",
-    onnx_path: str = "models/model.onnx",
+    sweep_trials: int = 10,
+    pkl_path: str = "models/registry/model.pkl",
+    onnx_path: str = "models/registry/model.onnx",
+    require_real_data: bool = False,
 ) -> Dict[str, Any]:
     """
-    Runs distinct ML candidate model & hyperparameter sweep experiments on real data,
-    logs metrics, parameters, tags (including git_commit), and artifacts to MLflow,
-    and promotes the top model to 'Production' stage in MLflow Model Registry.
+    Runs 6 candidate model experiments plus a Gradient Boosting random-search sweep
+    (`sweep_trials` extra runs), logs metrics, parameters, tags (git_commit, data_version,
+    dataset, framework, author) and artifacts to MLflow, promotes the best model to
+    'Production' in the Model Registry and exports it to `pkl_path` / `onnx_path`.
+
+    The default export location is `models/registry/`, so `models/model.pkl` (owned by the
+    DVC `train` stage) is never overwritten.
     """
     mlflow.set_experiment(experiment_name)
     client = MlflowClient()
-    git_commit_hash = get_git_commit()
 
     # Load real Kaggle crop yield dataset with shuffled random split
     from sklearn.model_selection import train_test_split
 
     X, y = load_raw_crop_data(filepath=raw_data_path)
+    dataset_tag = getattr(X, "attrs", {}).get("dataset_tag", "unknown")
+    if require_real_data and dataset_tag != "kaggle_crop_yield_real":
+        raise RuntimeError(
+            f"Refusing to track experiments on '{dataset_tag}' data. "
+            f"Put the real dataset at '{raw_data_path}' (dvc pull or scripts/download_data.py)."
+        )
+    common_tags = {
+        "experiment_type": "crop_yield_pipeline",
+        "dataset": dataset_tag,
+        "author": _git("config", "user.name"),
+        "git_commit": _git("rev-parse", "--short", "HEAD"),
+        "data_version": _data_version(),
+        "framework": "scikit-learn",
+    }
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
 
-    # Define candidate architectures & hyperparameter sweep variations
+    # Define 6 candidate architectures
     experiments = [
         {
             "name": "Ridge_Baseline",
@@ -119,17 +159,20 @@ def run_mlflow_experiments(
             "model": ExtraTreesRegressor(n_estimators=100, max_depth=15, random_state=42, n_jobs=-1),
             "params": {"model_type": "ExtraTrees", "n_estimators": 100, "max_depth": 15},
         },
-        {
-            "name": "Random_Forest_Sweep_Depth20",
-            "model": RandomForestRegressor(n_estimators=150, max_depth=20, random_state=42, n_jobs=-1),
-            "params": {"model_type": "RandomForest", "n_estimators": 150, "max_depth": 20, "sweep": True},
-        },
-        {
-            "name": "Extra_Trees_Sweep_Depth20",
-            "model": ExtraTreesRegressor(n_estimators=150, max_depth=20, random_state=42, n_jobs=-1),
-            "params": {"model_type": "ExtraTrees", "n_estimators": 150, "max_depth": 20, "sweep": True},
-        },
     ]
+
+    # Gradient Boosting random-search sweep (each trial is its own tracked run)
+    sweep = ParameterSampler(SWEEP_SPACE, n_iter=sweep_trials, random_state=42) if sweep_trials > 0 else []
+    for index, sampled in enumerate(sweep, start=1):
+        trial = dict(sampled)
+        experiments.append(
+            {
+                "name": f"GB_Sweep_{index:02d}",
+                "model": GradientBoostingRegressor(random_state=42, **trial),
+                "params": {"model_type": "GradientBoosting", **trial},
+                "extra_tags": {"sweep": "gb_random_search"},
+            }
+        )
 
     runs_info = []
 
@@ -152,10 +195,7 @@ def run_mlflow_experiments(
         with mlflow.start_run(run_name=run_name) as run:
             mlflow.log_params(params)
             mlflow.log_metrics(metrics)
-            mlflow.set_tag("experiment_type", "crop_yield_pipeline")
-            mlflow.set_tag("dataset", "kaggle_crop_yield_real")
-            mlflow.set_tag("author", "mlops_team")
-            mlflow.set_tag("git_commit", git_commit_hash)
+            mlflow.set_tags({**common_tags, **exp.get("extra_tags", {})})
 
             mlflow.sklearn.log_model(
                 sk_model=pipeline_model,
@@ -178,7 +218,6 @@ def run_mlflow_experiments(
                 run_id=run.info.run_id,
                 mae_hg_ha=metrics["MAE_hg_ha"],
                 r2=metrics["R2"],
-                git_commit=git_commit_hash,
             )
 
     # Best model selection (highest R2 / lowest MAE)
@@ -214,7 +253,7 @@ def run_mlflow_experiments(
     except Exception as e:
         logger.warning("alias_registration_notice", error=str(e))
 
-    # Export best model as primary local model artifact
+    # Export the registry winner next to (not over) the DVC-managed models/model.pkl
     save_artifacts(best_run["model"], pkl_path=pkl_path, onnx_path=onnx_path)
 
     return {
@@ -227,7 +266,7 @@ def run_mlflow_experiments(
 
 
 if __name__ == "__main__":
-    result = run_mlflow_experiments()
+    result = run_mlflow_experiments(require_real_data=True)
     logger.info(
         "mlflow_tracking_summary",
         registered_model="CropYieldModel",

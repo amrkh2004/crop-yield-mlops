@@ -40,9 +40,11 @@ def test_run_mlflow_experiments_mocked(mock_client_class, mock_mlflow, tmp_path)
 
     res = run_mlflow_experiments(
         experiment_name="Test_Exp",
+        sweep_trials=2,
         pkl_path=test_pkl,
         onnx_path=test_onnx,
     )
     assert "best_run_id" in res
     assert "best_model_name" in res
     assert res["registered_version"] == "1"
+    assert res["total_runs"] == 8  # 6 candidates + 2 sweep trials
